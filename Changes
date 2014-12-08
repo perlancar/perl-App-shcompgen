@@ -1,0 +1,7 @@
+Revision history for App-ShellCompletionInstaller
+
+0.01    2014-12-07 (PERLANCAR) (unreleased)
+
+        - First release, an evolution from App-BashCompletionProg and
+          App-BashCompletionF; this one supports multiple shells and works with
+          shells' standard completion scripts layout.

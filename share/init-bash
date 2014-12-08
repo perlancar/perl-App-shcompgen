@@ -1,0 +1,18 @@
+# shell-completion-installer loader for bash. load this file from your
+# /etc/bash.bashrc or ~/.bashrc, e.g.:
+#
+#  . /path/to/share/shell-completion-installer/init-bash
+#
+
+_shcompletion_loader()
+{
+    local f
+    for f in ~/.config/bash/completions/"$1" /etc/bash_completion.d/"$1"; do
+        if [[ -f "$f" ]]; then . "$f"; return; fi
+    done
+
+    # check if bash-completion is active by the existence of function
+    # '_completion_loader'. if it is, delegate to the function.
+    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader; fi
+}
+complete -D -F _shcompletion_loader
