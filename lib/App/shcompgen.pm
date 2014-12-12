@@ -422,7 +422,7 @@ _
     $instruction .= "Congratulations, shcompgen initialization is successful.\n\n";
 
     unless (-d $dir) {
-        make_path($args{bash_global_dir});
+        make_path($dir) or return [500, "Can't create $dir: $!"];
         $instruction .= "Directory '$dir' created.\n\n";
     }
 
