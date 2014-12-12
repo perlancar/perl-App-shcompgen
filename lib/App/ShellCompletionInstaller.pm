@@ -198,7 +198,7 @@ sub _install {
 
         if (-f $comppath) {
             if (!$args{replace}) {
-                $log->warnf("Not replacing completion script for $prog in '$comppath' (use --replace to replace)");
+                $log->infof("Not replacing completion script for $prog in '$comppath' (use --replace to replace)");
                 next PROG;
             }
         }
@@ -302,6 +302,7 @@ sub _uninstall {
             next;
         }
 
+        $log->debugf("Unlinking %f ...", $comppath);
         if (unlink $comppath) {
             $envres->add_result(200, "OK", {item_id=>$prog0});
         } else {
