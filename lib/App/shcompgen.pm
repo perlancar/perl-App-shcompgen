@@ -149,7 +149,7 @@ sub _gen_completion_script {
 
     my $detres = $args{detect_res};
     my $shell  = $args{shell};
-    my $prog   = $args{prog};
+    my $prog   = $detres->[3]{'func.completee'} // $args{prog};
     my $qprog  = shell_quote($prog);
     my $comp   = $detres->[3]{'func.completer_command'};
     my $qcomp  = shell_quote($comp);
