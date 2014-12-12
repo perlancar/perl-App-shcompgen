@@ -302,7 +302,7 @@ sub _uninstall {
             next;
         }
 
-        $log->debugf("Unlinking %f ...", $comppath);
+        $log->debugf("Unlinking %s ...", $comppath);
         if (unlink $comppath) {
             $envres->add_result(200, "OK", {item_id=>$prog0});
         } else {
