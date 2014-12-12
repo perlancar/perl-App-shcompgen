@@ -1,4 +1,15 @@
-Revision history for App-ShellCompletionInstaller
+Revision history for App-shcompgen
+
+0.02    2014-12-12 (PERLANCAR) (unreleased)
+
+        - Rename module/dist from App-ShellCompletionInstaller to App-shcompgen.
+
+        - [ux] Change interface to use subcommands.
+
+        - [Bugfix] init-bash: forgot to pass argument to _completion_loader.
+
+        - [ux] Add subcommand: 'init', to help ease initialization.
+
 
 0.01    2014-12-12 (PERLANCAR)
 
