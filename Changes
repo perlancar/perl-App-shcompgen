@@ -1,5 +1,14 @@
 Revision history for App-shcompgen
 
+0.04    2014-12-13 (PERLANCAR)
+
+	- [Bugfix] Use the correct completee.
+
+	- Add completion for 'generate'.
+
+	- Add completion for 'remove'.
+
+
 0.03    2014-12-13 (PERLANCAR)
 
         - [Bugfix] Fix typo that caused per-user completion directory not
