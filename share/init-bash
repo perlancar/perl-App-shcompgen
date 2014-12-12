@@ -13,6 +13,6 @@ _shcompletion_loader()
 
     # check if bash-completion is active by the existence of function
     # '_completion_loader'. if it is, delegate to the function.
-    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader; fi
+    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader "$1"; fi
 }
 complete -D -F _shcompletion_loader
