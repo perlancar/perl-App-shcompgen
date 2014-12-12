@@ -4,4 +4,7 @@ Revision history for App-ShellCompletionInstaller
 
         - First release, an evolution from App-BashCompletionProg and
           App-BashCompletionF; this one supports multiple shells and works with
-          shells' standard completion scripts layout.
+          shells' standard completion scripts layout. Another advantage is the
+          completion scripts can be activated on the current shell (instead of
+          waiting to start a new shell) because we use on-demand loading (e.g.
+          'complete -D' on bash). Early release though, only supports bash.
