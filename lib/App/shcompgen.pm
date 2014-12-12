@@ -19,6 +19,13 @@ use String::ShellQuote;
 
 our %SPEC;
 
+my $_complete_prog = sub {
+    require Complete::Util;
+
+    my %args = @_;
+    Complete::Util::complete_program(word=>$args{word}, ci=>1); # XXX plus exec on curdir
+};
+
 my $re_progname = qr/\A[A-Za-z0-9_.,:-]+\z/;
 
 $SPEC{':package'} = {
@@ -449,6 +456,7 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
+            element_completion => $_complete_prog,
         },
         replace => {
             summary => 'Replace existing script',
@@ -538,12 +546,7 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
-            element_completion => sub {
-                require Complete::Util;
-
-                my %args = @_;
-                Complete::Util::complete_program(word=>$args{word}, ci=>1);
-            },
+            element_completion => $_complete_prog,
         },
     },
 };
