@@ -8,49 +8,100 @@ use strict;
 use warnings;
 use Log::Any '$log';
 
-use File::Slurp::Tiny qw();
+use File::Slurp::Tiny qw(read_file write_file);
 use File::Which;
 use List::Util qw(first);
 use Perinci::Object;
 use Perinci::Sub::Util qw(err);
 use String::ShellQuote;
-use Text::Fragment qw();
 
 our %SPEC;
 
-my $re_progname = $Text::Fragment::re_id;
+my $re_progname = qr/\A[A-Za-z0-9_.,:-]+\z/;
 
 $SPEC{':package'} = {
     v => 1.1,
-    summary => "Manage /etc/bash-completion-prog (or ~/.bash-completion-prog)",
 };
 
-sub _f_path {
-    if ($>) {
-        "$ENV{HOME}/.bash-completion-prog";
-    } else {
-        "/etc/bash-completion-prog";
+sub _gen_completion_script {
+    my %args = @_;
+
+    my $detres = $args{detect_res};
+    my $shell  = $args{shell};
+    my $prog   = $args{prog};
+    my $qprog  = shell_quote($prog);
+    my $comp   = $detres->[3]{'func.completer_command'};
+    my $qcomp  = shell_quote($comp);
+
+    my $script;
+    if ($shell eq 'bash') {
+        if ($comp) {
+            $script = "complete -C $qcomp $qprog";
+        }
     }
+
+    # fish
+    # - completer_command -> check completer command if it's pericmd or
+    # glcomp or glsubc
+
+    $script = "# FRAGMENT id=shcompinst-header note=".$detres->[3]{'func.note'}.
+        "\n$script\n";
+
+    $script;
 }
 
-sub _read_parse_f {
-    my $path = shift // _f_path();
-    my $text = (-f $path) ? File::Slurp::Tiny::read_file($path) : "";
-    my $listres = Text::Fragment::list_fragments(text=>$text);
-    return $listres if $listres->[0] != 200;
-    [200,"OK",{path=>$path, content=>$text, parsed=>$listres->[2]}];
+sub _completion_scripts_dir {
+    my %args = @_;
+
+    my $shell  = $args{shell};
+    my $global = $args{global};
+
+    my $dir;
+    if ($shell eq 'bash') {
+        $dir = $global ? $args{bash_global_dir} :
+            $args{bash_per_user_dir};
+    } elsif ($shell eq 'fish') {
+        $dir = $global ? $args{fish_global_dir} :
+            $args{fish_per_user_dir};
+    } elsif ($shell eq 'tcsh') {
+        $dir = $global ? $args{tcsh_global_dir} :
+            $args{tcsh_per_user_dir};
+    } elsif ($shell eq 'zsh') {
+        $dir = $global ? $args{zsh_global_dir} :
+            $args{zsh_per_user_dir};
+    }
+    $dir;
 }
 
-sub _write_f {
-    my $path = shift // _f_path();
-    my $content = shift;
-    File::Slurp::Tiny::write_file($path, $content);
-    [200];
+sub _completion_script_path {
+    my %args = @_;
+
+    my $detres = $args{detect_res};
+    my $prog   = $detres->[3]{'func.completee'} // $args{prog};
+    my $shell  = $args{shell};
+    my $global = $args{global};
+
+    my $dir = $args{dir} // _completion_scripts_dir(%args);
+    my $path;
+    if ($shell eq 'bash') {
+        $path = "$dir/$prog";
+    } elsif ($shell eq 'fish') {
+        $path = "$dir/$prog.fish";
+    } elsif ($shell eq 'tcsh') {
+        $path = "$dir/$prog";
+    } elsif ($shell eq 'zsh') {
+        $path = "$dir/$prog";
+    }
+    $path;
 }
 
 # XXX plugin based
-sub _detect_file {
-    my ($prog, $path) = @_;
+sub _detect_prog {
+    my %args = @_;
+
+    my $prog = $args{prog};
+    my $path = $args{path};
+
     open my($fh), "<", $path or return [500, "Can't open: $!"];
     read $fh, my($buf), 2;
     my $is_script = $buf eq '#!';
@@ -62,57 +113,55 @@ sub _detect_file {
     seek $fh, 0, 0;
     my $content = do { local $/; ~~<$fh> };
 
-    my $qprog = shell_quote($prog);
     if ($content =~
-            /^\s*# FRAGMENT id=bash-completion-prog-hints command=(.+?)\s*$/m
-                && $content !~ /^\s*# FRAGMENT id=bash-completion-prog-nohint\s*$/m) {
+            /^\s*# FRAGMENT id=shcompinst-hint command=(.+?)\s*$/m
+                && $content !~ /^\s*# FRAGMENT id=shcompinst-nohint\s*$/m) {
+        # program give hints in its source code that it can be completed using a
+        # certain command
         return [200, "OK", 1, {
-            "func.command"=>"complete -C ".shell_quote($1)." $qprog",
-            "func.note"=>"hint",
+            "func.completer_command" => $1,
+            "func.note" => "hint(command)",
         }];
     } elsif ($content =~
-            /^\s*# FRAGMENT id=bash-completion-prog-hints completer=1 for=(.+?)\s*$/m
-                && $content !~ /^\s*# FRAGMENT id=bash-completion-prog-nohint\s*$/m) {
+            /^\s*# FRAGMENT id=shcompinst-hint completer=1 for=(.+?)\s*$/m
+                && $content !~ /^\s*# FRAGMENT id=shcompinst-nohint\s*$/m) {
+        my $completee = $1;
+        return [400, "completee specified in '$path' is not a valid ".
+                    "program name: $completee"]
+            unless $completee =~ $re_progname;
         return [200, "OK", 1, {
-            "func.command"=>join(
-                "; ",
-                map {"complete -C $qprog ".shell_quote($_)} split(',',$1)
-            ),
+            "func.completer_command" => $prog,
+            "func.completee" => $completee,
             "func.note"=>"hint(completer)",
         }];
     } elsif ($is_perl_script && $content =~
                  /^\s*(use|require)\s+(Perinci::CmdLine(?:::Any|::Lite)?)\b/m) {
         return [200, "OK", 1, {
-            "func.command"=>"complete -C $qprog $qprog",
+            "func.completer_command"=> $prog,
+            "func.completer_type"=> $2,
             "func.note"=>$2,
         }];
     } elsif ($is_perl_script && $content =~
                  /^\s*(use|require)\s+(Getopt::Long::Complete)\b/m) {
         return [200, "OK", 1, {
-            "func.command"=>"complete -C $qprog $qprog",
+            "func.completer_command"=> $prog,
+            "func.completer_type"=> $2,
             "func.note"=>$2,
         }];
     }
+    # XXX Getopt::Long::Subcommand
     [200, "OK", 0];
 }
 
-# add one or more programs
-sub _add {
+# install completion script for one or more programs
+sub _install {
     my %args = @_;
 
-    my $readres = _read_parse_f($args{file});
-    return err("Can't read entries", $readres) if $readres->[0] != 200;
-
-    my %existing_progs = map {$_->{id}=>1} @{ $readres->[2]{parsed} };
-
-    my $content = $readres->[2]{content};
-
-    my $added;
     my $envres = envresmulti();
   PROG:
     for my $prog0 (@{ $args{progs} }) {
         my $path;
-        $log->infof("Processing program %s ...", $prog0);
+        $log->debugf("Processing program %s ...", $prog0);
         if ($prog0 =~ m!/!) {
             $path = $prog0;
             unless (-f $path) {
@@ -129,96 +178,38 @@ sub _add {
             }
         }
         my $prog = $prog0; $prog =~ s!.+/!!;
-        my $detectres = _detect_file($prog, $path);
-        if ($detectres->[0] != 200) {
-            $log->errorf("Can't detect '%s': %s", $prog, $detectres->[1]);
-            $envres->add_result($detectres->[0], $detectres->[1],
+        my $detres = _detect_prog(prog=>$prog, path=>$path);
+        if ($detres->[0] != 200) {
+            $log->errorf("Can't detect '%s': %s", $prog, $detres->[1]);
+            $envres->add_result($detres->[0], $detres->[1],
                                 {item_id=>$prog0});
             next PROG;
         }
-        $log->debugf("Detection result for '%s': %s", $prog, $detectres);
-        if (!$detectres->[2]) {
+        $log->debugf("Detection result for '%s': %s", $prog, $detres);
+        if (!$detres->[2]) {
             # we simply ignore undetected programs
             next PROG;
         }
 
-        if ($args{replace}) {
-            if ($existing_progs{$prog}) {
-                $log->infof("Replacing entry in %s: %s",
-                            $readres->[2]{path}, $prog);
-            } else {
-                $log->infof("Adding entry to %s: %s",
-                            $readres->[2]{path}, $prog);
-            }
-        } else {
-            if ($existing_progs{$prog}) {
-                $log->debugf("Entry already exists in %s: %s, skipped",
-                             $readres->[2]{path}, $prog);
+        my $script = _gen_completion_script(
+            prog => $prog, detect_res => $detres, %args);
+        my $comppath = _completion_script_path(
+            prog => $prog, detect_res => $detres, %args);
+
+        if (-f $comppath) {
+            if (!$args{replace}) {
+                $log->warnf("Not replacing completion script for $prog in '$comppath' (use --replace to replace)");
                 next PROG;
-            } else {
-                $log->infof("Adding entry to %s: %s",
-                            $readres->[2]{path}, $prog);
             }
         }
-
-        my $insres = Text::Fragment::insert_fragment(
-            text=>$content, id=>$prog,
-            payload=>$detectres->[3]{'func.command'},
-            ((attrs=>{note=>$detectres->[3]{'func.note'}}) x !!$detectres->[3]{'func.note'}));
-        $envres->add_result($insres->[0], $insres->[1],
-                            {item_id=>$prog0});
-        next if $insres->[0] == 304;
-        next unless $insres->[0] == 200;
-        $added++;
-        $content = $insres->[2]{text};
-    }
-
-    if ($added) {
-        my $writeres = _write_f($args{file}, $content);
-        return err("Can't write", $writeres) if $writeres->[0] != 200;
-    }
-
-    $envres->as_struct;
-}
-
-sub _remove {
-    my %args = @_;
-    my $readres = _read_parse_f($args{file});
-    return err("Can't read entries", $readres) if $readres->[0] != 200;
-
-    my $envres = envresmulti();
-
-    my $content = $readres->[2]{content};
-    my $deleted;
-    for my $entry (@{ $readres->[2]{parsed} }) {
-        $log->debugf("Processing entry: %s", $entry);
-        my $remove;
-        if ($args{criteria}) {
-            $remove = $args{criteria}->($entry);
-        } elsif ($args{progs}) {
-            use experimental 'smartmatch';
-            $remove = 1 if $entry->{id} ~~ @{ $args{progs} };
+        eval { write_file($comppath, $script) };
+        if ($@) {
+            $envres->add_result(500, "Can't write to '$comppath': $@",
+                                {item_id=>$prog0});
         } else {
-            die "BUG: no criteria nor progs are given";
+            $envres->add_result(200, "OK", {item_id=>$prog0});
         }
-
-        next unless $remove;
-        $log->infof("Removing from %s: %s",
-                    $readres->[2]{path}, $entry->{id});
-        my $delres = Text::Fragment::delete_fragment(
-            text=>$content, id=>$entry->{id});
-        next if $delres->[0] == 304;
-        $envres->add_result($delres->[0], $delres->[1],
-                            {item_id=>$entry->{id}});
-        next if $delres->[0] != 200;
-        $deleted++;
-        $content = $delres->[2]{text};
-    }
-
-    if ($deleted) {
-        my $writeres = _write_f($args{file}, $content);
-        return err("Can't write", $writeres) if $writeres->[0] != 200;
-    }
+    } # for prog0
 
     $envres->as_struct;
 }
@@ -226,29 +217,110 @@ sub _remove {
 sub _list {
     my %args = @_;
 
-    my $res = _read_parse_f($args{file} // _f_path());
-    return $res if $res->[0] != 200;
-
     my @res;
-    for (@{ $res->[2]{parsed} }) {
+    my $dir = _completion_scripts_dir(%args);
+    $log->tracef("Opening dir %s ...", $dir);
+    opendir my($dh), $dir or return [500, "Can't read dir '$dir': $!"];
+    for my $entry (readdir $dh) {
+        next if $entry eq '.' || $entry eq '..';
+        # XXX leaky abstraction
+        my $prog = $entry; $prog =~ /\.fish\z/ if $args{shell} eq 'fish';
+        next unless $prog =~ $re_progname;
+        my $comppath = _completion_script_path(%args, dir=>$dir, prog=>$prog);
+        $log->tracef("Checking completion script '%s' ...", $comppath);
+        my $content;
+        eval { $content = read_file($comppath) };
+        if ($@) {
+            $log->warnf("Can't open file '%s': %s", $comppath, $@);
+            next;
+        };
+        unless ($content =~ /^# FRAGMENT id=shcompinst-header note=(.+)\b/m) {
+            $log->debugf("Skipping prog %s, not installed by us", $entry);
+            next;
+        }
+        my $note = $1;
         if ($args{detail}) {
-            push @res, {id=>$_->{id}, payload=>$_->{payload}, note=>$_->{attrs}{note}};
+            push @res, {
+                prog => $prog,
+                note => $note,
+                path => $comppath,
+            };
         } else {
-            push @res, $_->{id};
+            push @res, $prog;
         }
     }
 
-    [200, "OK", \@res];
+    [200, "OK", \@res, {('cmdline.default_format'=>'text-simple') x !$args{detail}}];
+}
+
+sub _uninstall {
+    my %args = @_;
+
+    my $envres = envresmulti();
+
+    # XXX refactor: merge with _install to remove code duplication
+
+  PROG:
+    for my $prog0 (@{ $args{progs} }) {
+        my $path;
+        $log->debugf("Processing program %s ...", $prog0);
+        if ($prog0 =~ m!/!) {
+            $path = $prog0;
+            unless (-f $path) {
+                $log->errorf("No such file '$path', skipped");
+                $envres->add_result(404, "No such file", {item_id=>$prog0});
+                next PROG;
+            }
+        } else {
+            $path = which($prog0);
+            unless ($path) {
+                $log->errorf("'%s' not found in PATH, skipped", $prog0);
+                $envres->add_result(404, "Not in PATH", {item_id=>$prog0});
+                next PROG;
+            }
+        }
+        my $prog = $prog0; $prog =~ s!.+/!!;
+        my $comppath = _completion_script_path(
+            prog => $prog, %args);
+
+        unless (-f $comppath) {
+            $log->infof("Skipping %s (completion script does not exist)", $prog0);
+            next PROG;
+        }
+        my $content;
+        eval { $content = read_file($comppath) };
+        if ($@) {
+            $envres->add_result(500, "Can't open: $@", {item_id=>$prog0});
+            next;
+        };
+        unless ($content =~ /^# FRAGMENT id=shcompinst-header note=(.+)\b/m) {
+            $log->debugf("Skipping %s, not installed by us", $prog0);
+            next;
+        }
+        if ($args{criteria} && !$args{criteria}->($prog)) {
+            $log->debugf("Skipping %s", $prog0);
+            next;
+        }
+
+        if (unlink $comppath) {
+            $envres->add_result(200, "OK", {item_id=>$prog0});
+        } else {
+            $envres->add_result(500, "Can't unlink '$comppath': $!",
+                                {item_id=>$prog0});
+        }
+    } # for prog0
+
+    $envres->as_struct;
 }
 
 sub _clean {
     require File::Which;
 
     my %args = @_;
-    _remove(
+    _uninstall(
         criteria => sub {
-            my $entry = shift;
-            if (File::Which::which($entry->{id})) {
+            my $prog = shift;
+            if (File::Which::which($prog)) {
                 return 0;
             }
             1;
@@ -258,4 +330,4 @@ sub _clean {
 }
 
 1;
-# ABSTRACT: Backend for bash-completion-prog script
+# ABSTRACT: Backend for shell-completion-installer script

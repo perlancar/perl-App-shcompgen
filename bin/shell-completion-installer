@@ -7,6 +7,7 @@
 use 5.010;
 use strict;
 use warnings;
+use experimental 'smartmatch';
 
 use App::ShellCompletionInstaller;
 use Perinci::CmdLine::Any -prefer_lite=>1;
@@ -27,9 +28,34 @@ sub _all_exec_in_PATH {
     \@res;
 }
 
+my $supported_shells = [qw/bash/]; # fish tcsh zsh
+my @common_args = qw(
+                        shell
+                        global
+                        bash_global_dir bash_per_user_dir
+                        fish_global_dir fish_per_user_dir
+);
+#                        XXX tcsh_global_dir tcsh_per_user_dir
+#                        XXX zsh_global_dir zsh_per_user_dir
+
 $SPEC{installer} = {
     v => 1.1,
     summary => 'Shell completion installer',
+    description => <<'_',
+
+This script will attempt to determine the appropriate shell tab completion
+script for a program/command (by default, all programs in PATH will be
+attempted) and install the completion scripts to the appropriate directory for
+your shell.
+
+See the manpage for more details on the methods and kinds of programs it can
+detect.
+
+Uninstallation and listing are also supported.
+
+Several shells are supported.
+
+_
     args => {
         action => {
             schema => 'str*',
@@ -46,13 +72,80 @@ $SPEC{installer} = {
             schema => 'bool*',
         },
         replace => {
-            schema => 'bool*',
+            summary => 'When installing a completion script, replace existing',
+            schema  => 'bool*',
+            description => <<'_',
+
+The default behavior is to skip installing if an existing completion script
+exists.
+
+_
         },
-       args => {
+        args => {
             schema => ['array*' => of => 'str*'],
             pos    => 0,
             greedy => 1,
         },
+        shell => {
+            summary => 'Override autodetection and select shell manually',
+            schema => ['str*', {in=>$supported_shells}], # XXX tcsh zsh
+            description => <<'_',
+
+The default is to look at your SHELL environment variable value. If it is
+undefined, the default is `bash`.
+
+_
+        },
+        global => {
+            summary => 'Use global completions directory',
+            schema => ['bool*'],
+            cmdline_aliases => {
+                per_user => {
+                    is_flag => 1,
+                    code    => sub { $_[0]{global} = 0 },
+                    summary => 'Alias for --no-global',
+                },
+            },
+            description => <<'_',
+
+Shell has global (system-wide) completions directory as well as per-user. For
+example, in fish the global directory is by default `/etc/fish/completions` and
+the per-user directory is `~/.config/fish/completions`.
+
+By default, if running as root, the global is chosen. And if running as normal
+user, per-user directory is chosen. Using `--global` or `--per-user` overrides
+that and manually select which.
+
+_
+            links => [qw/
+                            bash_global_dir bash_per_user_dir
+                            fish_global_dir fish_per_user_dir
+                        /],
+            # tcsh_global_dir tcsh_per_user_dir
+            # zsh_global_dir zsh_per_user_dir
+        },
+        bash_global_dir => {
+            summary => 'Directory to put completions scripts',
+            schema  => 'str*',
+            default => '/etc/bash_completion.d',
+        },
+        bash_per_user_dir => {
+            summary => 'Directory to put completions scripts',
+            schema  => 'str*',
+        },
+        fish_global_dir => {
+            summary => 'Directory to put completions scripts',
+            schema  => 'str*',
+            default => '/etc/fish/completions',
+        },
+        fish_per_user_dir => {
+            summary => 'Directory to put completions scripts',
+            schema  => 'str*',
+        },
+        # XXX tcsh_global_dir
+        # XXX tcsh_per_user_dir
+        # XXX zsh_global_dir
+        # XXX zsh_per_user_dir
     },
 };
 sub installer {
@@ -61,26 +154,59 @@ sub installer {
     my $action = $args{action};
     my $args   = $args{args};
 
-    if ($action eq 'add') {
+    my $shell;
+    {
+        $shell = $args{shell};
+        if (!$shell) { ($shell = $ENV{SHELL} // '') =~ s!.+/!! }
+        if (!$shell) { $shell = 'bash' }
+        unless ($shell ~~ @$supported_shells) {
+            return [412, "Unsupported shell '$shell'"];
+        }
+        $args{shell} = $shell;
+    }
+
+    my $global;
+    {
+        $global = $args{global} // ($> ? 0:1);
+        $args{global} = $global;
+    }
+
+    {
+        $args{bash_global_dir}   //= '/etc/bash_completion.d';
+        $args{bash_per_user_dir} //= "$ENV{HOME}/.config/bash/completions";
+        $args{fish_global_dir}   //= '/etc/fish/completions';
+        $args{fish_per_user_dir} //= "$ENV{HOME}/.config/fish/completions";
+        $args{tcsh_global_dir}   //= '/etc/bash_completion.d';
+        $args{tcsh_per_user_dir} //= "$ENV{HOME}/.config/bash/completions";
+        $args{zsh_global_dir}    //= '/etc/zsh/completions';
+        $args{zsh_per_user_dir}  //= "$ENV{HOME}/.config/zsh/completions";
+    }
+
+    my %common_args;
+    for (@common_args) {
+        $common_args{$_} = $args{$_} if defined $args{$_};
+    }
+
+    if ($action eq 'install') {
         $args = _all_exec_in_PATH() unless $args;
         return App::ShellCompletionInstaller::_install(
-            file    => $args{file},
+            %common_args,
             progs   => $args,
             replace => $args{replace},
         );
     } elsif ($action eq 'list') {
         return App::ShellCompletionInstaller::_list(
-            file    => $args{file},
+            %common_args,
             detail  => $args{detail},
         );
     } elsif ($action eq 'clean') {
         return App::ShellCompletionInstaller::_clean(
-            file    => $args{file},
+            %common_args,
         );
     } elsif ($action eq 'uninstall') {
         $args = _all_exec_in_PATH() unless $args;
         return App::ShellCompletionInstaller::_uninstall(
-            file    => $args{file},
+            %common_args,
             progs   => $args,
         );
     }
@@ -119,6 +245,9 @@ Uninstall all:
 
 
 =head1 DESCRIPTION
+
+B<NOTE: EARLY RELEASE. ONLY BASH SUPPORT HAVE BEEN ADDED. SUPPORT FOR THE OTHER
+SHELLS WILL FOLLOW.>
 
 Some shells, like bash/fish/zsh, supports tab completion for programs. They are
 usually activated by issuing one or more C<complete> (zsh uses C<compctl>)
@@ -173,6 +302,8 @@ Depending on your configuration, by default zsh's C<FPATH> doesn't contain
 per-user directory. You can put this line in your C<~/.zshrc>:
 
  export FPATH="~/.config/zsh/completions:$FPATH"
+
+and create the C<~/.config/zsh/completions> directory.
 
 =head2 Program detection
 
