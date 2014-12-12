@@ -403,7 +403,8 @@ _shcompgen_loader()
     # '_completion_loader'. if it is, delegate to the function.
     if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader "$1"; fi
 
-    # otherwise, do as default
+    # otherwise, do as default (XXX still need to fix this, we don't want to
+    # install a fixed completion for unknown commands)
     complete -o default "$1"
     return 0
 }
