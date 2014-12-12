@@ -321,7 +321,7 @@ sub _generate_or_remove {
                     next PROG;
                 }
             }
-            $log->debugf("Writing completion script to %s ...", $comppath);
+            $log->infof("Writing completion script to %s ...", $comppath);
             eval { write_file($comppath, $script) };
             if ($@) {
                 $envres->add_result(500, "Can't write to '$comppath': $@",
@@ -334,7 +334,7 @@ sub _generate_or_remove {
         if ($which eq 'remove') {
             my $comppath = _completion_script_path(%args, prog => $prog);
             unless (-f $comppath) {
-                $log->infof("Skipping %s (completion script does not exist)", $prog0);
+                $log->debugf("Skipping %s (completion script does not exist)", $prog0);
                 next PROG;
             }
             my $content;
@@ -347,7 +347,7 @@ sub _generate_or_remove {
                 $log->debugf("Skipping %s, not installed by us", $prog0);
                 next;
             }
-            $log->debugf("Unlinking %s ...", $comppath);
+            $log->infof("Unlinking %s ...", $comppath);
             if (unlink $comppath) {
                 $envres->add_result(200, "OK", {item_id=>$prog0});
             } else {
