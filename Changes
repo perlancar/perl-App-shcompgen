@@ -1,5 +1,13 @@
 Revision history for App-shcompgen
 
+0.03    2014-12-13 (PERLANCAR)
+
+        - [Bugfix] Fix typo that caused per-user completion directory not
+          created during init (despite the success message).
+
+        - Minor tweaks.
+
+
 0.02    2014-12-13 (PERLANCAR)
 
         - Rename module/dist from App-ShellCompletionInstaller to App-shcompgen.
