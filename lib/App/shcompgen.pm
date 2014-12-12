@@ -538,6 +538,12 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
+            element_completion => sub {
+                require Complete::Util;
+
+                my %args = @_;
+                Complete::Util::complete_program(word=>$args{word}, ci=>1);
+            },
         },
     },
 };
