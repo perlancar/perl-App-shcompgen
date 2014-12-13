@@ -400,12 +400,11 @@ _shcompgen_loader()
 
     # check if bash-completion is active by the existence of function
     # '_completion_loader'. if it is, delegate to the function.
-    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader "$1"; fi
+    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader "$1"; return 124; fi
 
     # otherwise, do as default (XXX still need to fix this, we don't want to
     # install a fixed completion for unknown commands)
-    complete -o default "$1"
-    return 0
+    complete -o default "$1" && return 124
 }
 complete -D -F _shcompgen_loader
 _
