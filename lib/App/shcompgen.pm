@@ -15,13 +15,6 @@ use Perinci::Sub::Util qw(err);
 
 our %SPEC;
 
-my $_complete_prog = sub {
-    require Complete::Util;
-
-    my %args = @_;
-    Complete::Util::complete_program(word=>$args{word}, ci=>1); # XXX plus exec on curdir
-};
-
 my $re_progname = qr/\A[A-Za-z0-9_.,:-]+\z/;
 
 $SPEC{':package'} = {
@@ -459,7 +452,23 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
-            element_completion => $_complete_prog,
+            element_completion => sub {
+                require Complete::Util;
+
+                my %args = @_;
+                my $word = $args{word} // '';
+                if ($word =~ m!/!) {
+                    # user might want to mention a program file (e.g. ./foo)
+                    return {
+                        words => Complete::Util::complete_file(
+                            word=>$word, ci=>1, filter=>'d|rxf'),
+                        path_sep => '/',
+                    };
+                } else {
+                    # or user might want to mention a program in PATH
+                    Complete::Util::complete_program(word=>$word, ci=>1);
+                }
+            },
         },
         replace => {
             summary => 'Replace existing script',
@@ -549,7 +558,36 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
-            element_completion => $_complete_prog,
+            element_completion => sub {
+                require Complete::Util;
+
+                my %args = @_;
+                my $word = $args{word} // '';
+
+                # return list of programs in the completion scripts dir
+
+                my $cmdline = $args{extras}{cmdline};
+                my $r       = $args{extras}{r};
+
+                # we are not called from cmdline, bail (actually we might want
+                # to return list of programs anyway, but we want to read the
+                # value of bash_global_dir et al)
+                return undef unless $cmdline;
+
+                # strip subcommand name
+                if (($r->{subcommand_name_from} // '') eq 'arg') {
+                    shift @ARGV;
+                }
+
+                my $res = $cmdline->parse_argv($r);
+                return undef unless $res->[0] == 200;
+                my $cmd_args = $res->[2];
+
+                $res = list(%$cmd_args);
+                return undef unless $res->[0] == 200;
+                Complete::Util::complete_array_elem(
+                    array=>$res->[2], word=>$word, ci=>1);
+            },
         },
     },
 };
