@@ -424,7 +424,7 @@ _
         $instruction .= "Directory '$dir' created.\n\n";
     }
 
-    my $res = generate(%args);
+    my $res = generate(%args, replace=>1);
     return err(500, "Can't generate", $res) unless $res->[0] == 200;
 
     write_file($init_script_path, $init_script);
