@@ -285,8 +285,9 @@ sub _generate_or_remove {
                 next PROG;
             }
         } else {
+            require File::Which;
             $prog = $prog0;
-            $progpath = which($prog0);
+            $progpath = File::Which::which($prog0);
             unless ($progpath) {
                 $log->errorf("'%s' not found in PATH, skipped", $prog0);
                 $envres->add_result(404, "Not in PATH", {item_id=>$prog0});
