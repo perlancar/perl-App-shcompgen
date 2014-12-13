@@ -9,13 +9,9 @@ use warnings;
 use experimental 'smartmatch';
 use Log::Any '$log';
 
-use File::Path qw(make_path);
 use File::Slurp::Tiny qw(read_file write_file);
-use File::Which;
-use List::Util qw(first);
 use Perinci::Object;
 use Perinci::Sub::Util qw(err);
-use String::ShellQuote;
 
 our %SPEC;
 
@@ -145,14 +141,16 @@ sub _set_args_defaults {
 }
 
 sub _gen_completion_script {
+    require String::ShellQuote;
+
     my %args = @_;
 
     my $detres = $args{detect_res};
     my $shell  = $args{shell};
     my $prog   = $detres->[3]{'func.completee'} // $args{prog};
-    my $qprog  = shell_quote($prog);
+    my $qprog  = String::ShellQuote::shell_quote($prog);
     my $comp   = $detres->[3]{'func.completer_command'};
-    my $qcomp  = shell_quote($comp);
+    my $qcomp  = String::ShellQuote::shell_quote($comp);
 
     my $script;
     if ($shell eq 'bash') {
@@ -429,7 +427,8 @@ _
     $instruction .= "Congratulations, shcompgen initialization is successful.\n\n";
 
     unless (-d $dir) {
-        make_path($dir) or return [500, "Can't create $dir: $!"];
+        require File::Path;
+        File::Path::make_path($dir) or return [500, "Can't create $dir: $!"];
         $instruction .= "Directory '$dir' created.\n\n";
     }
 
