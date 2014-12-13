@@ -15,7 +15,7 @@ use Perinci::CmdLine::Any -prefer_lite=>1;
 my $urlprefix = '/App/shcompgen/';
 Perinci::CmdLine::Any->new(
     url => $urlprefix,
-    log => 1,
+    log => $ENV{LOG} // 1,
     subcommands => {
         init     => {url=>"${urlprefix}init"},
         generate => {url=>"${urlprefix}generate"},
