@@ -29,11 +29,13 @@ Perinci::CmdLine::Any->new(
 
 =head1 SYNOPSIS
 
-Initialize:
+Initialize (this will create completion scripts directory, shell script to
+initialize completion, as well as 'generate'):
 
  % shcompgen init
 
-Generate shell completion scripts for all detectable programs in PATH:
+Generate shell completion scripts for all detectable programs in PATH (this is
+actually already done during 'init'):
 
  % shcompgen generate
  % shcompgen generate --verbose

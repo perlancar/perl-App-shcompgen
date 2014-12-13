@@ -372,7 +372,7 @@ $SPEC{init} = {
     description => <<'_',
 
 This subcommand creates the completion directories and initialization shell
-script.
+script, as well as run `generate`.
 
 _
     args => {
@@ -424,17 +424,21 @@ _
         return [412, "Shell '$shell' not yet supported"];
     }
 
-    $instruction .= "Congratulations, shcompgen initialization is successful.\n\n";
-
     unless (-d $dir) {
         require File::Path;
         File::Path::make_path($dir) or return [500, "Can't create $dir: $!"];
         $instruction .= "Directory '$dir' created.\n\n";
     }
 
+    my $res = generate(%args);
+    return err(500, "Can't generate", $res) unless $res->[0] == 200;
+
     write_file($init_script_path, $init_script);
-    $instruction .= "Please put this into your $init_location:\n\n";
-    $instruction .= " . $init_script_path\n\n";
+    $instruction .= "Please put this into your $init_location:".
+        "\n\n" . " . $init_script_path\n\n";
+
+    $instruction = "Congratulations, shcompgen initialization is successful.".
+        "\n\n$instruction";
 
     [200, "OK", $instruction];
 }
