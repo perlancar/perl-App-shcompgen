@@ -1,5 +1,23 @@
 Revision history for App-shcompgen
 
+0.05    2014-12-14 (PERLANCAR)
+
+        - Support multiple global/per-user dirs (e.g. bash has global completion
+          scripts dir in /usr/share/bash-completion/completions as well as
+          /etc/bash_completion.d).
+
+        - [ux] Run 'shcompgen init' and 'shcompgen generate --replace' during
+          install, for user's convenience.
+
+        - [Bugfix] Regression: File::Which *was* needed, but removed.
+
+        - [Bugfix] in shcompgen.bashrc: Return 124 instead of 0, otherwise we'll
+          need an extra Tab when completing a new command which is annoying
+          (UPDATE: but extra Tab is still needed?)
+
+        - Tweak completion routines.
+
+
 0.04    2014-12-13 (PERLANCAR)
 
 	- [Bugfix] Use the correct completee.
