@@ -1,5 +1,14 @@
 Revision history for App-shcompgen
 
+0.06    2014-12-14 (PERLANCAR)
+
+        - No functional changes.
+
+        - Rebuild with new version of DZP::shcompgen::InitOnInstall (show output
+          of init, though most users won't see this because they will install
+          using 'cpanm' without the -v option).
+
+
 0.05    2014-12-14 (PERLANCAR)
 
         - Support multiple global/per-user dirs (e.g. bash has global completion
