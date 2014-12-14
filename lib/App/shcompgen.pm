@@ -376,7 +376,6 @@ _
     args => {
         %common_args,
     },
-    'cmdline.default_format' => 'text-simple',
 };
 sub init {
     my %args = @_;
@@ -550,8 +549,7 @@ sub list {
         }
     } # for $dir
 
-    [200, "OK", \@res,
-     {('cmdline.default_format'=>'text-simple') x !$args{detail}}];
+    [200, "OK", \@res];
 }
 
 $SPEC{remove} = {
