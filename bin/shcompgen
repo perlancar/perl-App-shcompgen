@@ -25,7 +25,7 @@ Perinci::CmdLine::Any->new(
 )->run;
 
 # ABSTRACT: Generate shell completion scripts
-# PODNAME: shcompgen
+# PODNAME:
 
 =head1 SYNOPSIS
 
