@@ -608,4 +608,4 @@ sub remove {
 }
 
 1;
-# ABSTRACT: Backend for shcompgen script
+# ABSTRACT:
