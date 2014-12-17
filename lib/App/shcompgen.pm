@@ -399,15 +399,28 @@ _
         $init_script .= <<'_';
 _shcompgen_loader()
 {
-    local d
+    # check if bash-completion is active by the existence of function
+    # '_completion_loader'.
+    local bc_active=0
+    if [[ "`type -t _completion_loader`" = "function" ]]; then bc_active=1; fi
+
     # XXX should we use --bash-{global,per-user}-dir supplied by user here? probably.
-    for d in ~/.config/bash/completions /etc/bash_completion.d /usr/share/bash-completion/completions; do
-        if [[ -f "$d/$1" ]]; then . "$d/$1"; return; fi
+    local dirs
+    if [[ "$bc_active" = 1 ]]; then
+        dirs=(~/.config/bash/completions /etc/bash_completion.d /usr/share/bash-completion/completions)
+    else
+        # we don't use bash-completion scripts when bash-completion is not
+        # initialized because some of the completion scripts require that
+        # bash-completion system is initialized first
+        dirs=(~/.config/bash/completions)
+    fi
+
+    local d
+    for d in ${dirs[*]}; do
+        if [[ -f "$d/$1" ]]; then . "$d/$1"; return 124; fi
     done
 
-    # check if bash-completion is active by the existence of function
-    # '_completion_loader'. if it is, delegate to the function.
-    if [[ "`type -t _completion_loader`" = "function" ]]; then _completion_loader "$1"; return 124; fi
+    if [[ $bc_active = 1 ]]; then _completion_loader "$1"; return 124; fi
 
     # otherwise, do as default (XXX still need to fix this, we don't want to
     # install a fixed completion for unknown commands; but using 'compopt -o
