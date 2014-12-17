@@ -1,5 +1,12 @@
 Revision history for App-shcompgen
 
+0.07    2014-12-17 (PERLANCAR)
+
+	- Tweak/fix init script for bash: forget to return 124 when
+	  completion script exists (so user still needed extra tab), don't
+	  use bash-completion scripts when bash-completion is not active.
+
+
 0.06    2014-12-14 (PERLANCAR)
 
         - No functional changes.
