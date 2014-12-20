@@ -582,31 +582,13 @@ searched from PATH.
 
 _
             element_completion => sub {
+                # list programs in the completion scripts dir
                 require Complete::Util;
 
                 my %args = @_;
                 my $word = $args{word} // '';
 
-                # return list of programs in the completion scripts dir
-
-                my $cmdline = $args{extras}{cmdline};
-                my $r       = $args{extras}{r};
-
-                # we are not called from cmdline, bail (actually we might want
-                # to return list of programs anyway, but we want to read the
-                # value of bash_global_dir et al)
-                return undef unless $cmdline;
-
-                # strip subcommand name
-                if (($r->{subcommand_name_from} // '') eq 'arg') {
-                    shift @ARGV;
-                }
-
-                my $res = $cmdline->parse_argv($r);
-                return undef unless $res->[0] == 200;
-                my $cmd_args = $res->[2];
-
-                $res = list(%$cmd_args);
+                my $res = list($args{args});
                 return undef unless $res->[0] == 200;
                 Complete::Util::complete_array_elem(
                     array=>$res->[2], word=>$word, ci=>1);
