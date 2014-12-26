@@ -62,7 +62,7 @@ Remove all generated shell completion scripts:
 
 =head1 DESCRIPTION
 
-B<NOTE: EARLY RELEASE. ONLY BASH SUPPORT HAVE BEEN ADDED. SUPPORT FOR THE OTHER
+B<NOTE: EARLY RELEASE. ONLY BASH SUPPORT HAS BEEN ADDED. SUPPORT FOR THE OTHER
 SHELLS WILL FOLLOW.>
 
 Some shells, like bash/fish/zsh, supports tab completion for programs. They are
