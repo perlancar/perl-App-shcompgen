@@ -158,9 +158,6 @@ so on.
 =back
 
 
-=head1 TODO
-
-
 =head1 SEE ALSO
 
 L<Dist::Zilla::Plugin::Rinci::InstallCompletion>
