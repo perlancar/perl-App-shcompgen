@@ -251,14 +251,14 @@ sub _detect_prog {
             "func.note"=>"hint(completer)",
         }];
     } elsif ($is_perl_script && $content =~
-                 /^\s*(use|require)\s+(Perinci::CmdLine(?:::Any|::Lite)?)\b/m) {
+                 /^\s*(use|require)\s+(Perinci::CmdLine(?:::Any|::Lite|::Classic)?)\b/m) {
         return [200, "OK", 1, {
             "func.completer_command"=> $prog,
             "func.completer_type"=> $2,
             "func.note"=>$2,
         }];
     } elsif ($is_perl_script && $content =~
-                 /^\s*(use|require)\s+(Getopt::Long::Complete)\b/m) {
+                 /^\s*(use|require)\s+(Getopt::Long::(?:Complete|Subcommand))\b/m) {
         return [200, "OK", 1, {
             "func.completer_command"=> $prog,
             "func.completer_type"=> $2,
