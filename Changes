@@ -1,5 +1,10 @@
 Revision history for App-shcompgen
 
+0.09    2015-02-11 (PERLANCAR)
+
+	- Support Perinci::CmdLine::Classic and Getopt::Long::Subcommand.
+
+
 0.08    2014-12-20 (PERLANCAR)
 
 	- Simplify completion routine for remove(), adjust to periscomp
