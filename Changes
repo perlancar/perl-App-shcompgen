@@ -1,5 +1,12 @@
 Revision history for App-shcompgen
 
+0.10    2015-08-17 (PERLANCAR)
+
+	- No functional changes.
+
+	- Switch from Log::Any to Log::Any::IfLOG.
+
+
 0.09    2015-02-11 (PERLANCAR)
 
 	- Support Perinci::CmdLine::Classic and Getopt::Long::Subcommand.
