@@ -1,5 +1,11 @@
 Revision history for App-shcompgen
 
+0.11    2015-08-17 (PERLANCAR)
+
+	- Make sure we add result for all programs being processed, so we
+	  get the appropriate final status code (e.g. 207 partial success).
+
+
 0.10    2015-08-17 (PERLANCAR)
 
 	- No functional changes.
