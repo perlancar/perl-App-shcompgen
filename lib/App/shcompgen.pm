@@ -218,7 +218,7 @@ sub _detect_prog {
     my $prog     = $args{prog};
     my $progpath = $args{progpath};
 
-    open my($fh), "<", $progpath or return [500, "Can't open: $!"];
+    open my($fh), "<", $progpath or return [500, "Can't open '$progpath': $!"];
     read $fh, my($buf), 2;
     my $is_script = $buf eq '#!';
 
@@ -321,6 +321,7 @@ sub _generate_or_remove {
             if (-f $comppath) {
                 if (!$args{replace}) {
                     $log->infof("Not replacing completion script for $prog in '$comppath' (use --replace to replace)");
+                    $envres->add_result(304, "Not replaced (already exists)", {item_id=>$prog0});
                     next PROG;
                 }
             }
@@ -338,16 +339,18 @@ sub _generate_or_remove {
             my $comppath = _completion_script_path(%args, prog => $prog);
             unless (-f $comppath) {
                 $log->debugf("Skipping %s (completion script does not exist)", $prog0);
+                $envres->add_result(304, "Completion does not exist", {item_id=>$prog0});
                 next PROG;
             }
             my $content;
             eval { $content = read_file($comppath) };
             if ($@) {
-                $envres->add_result(500, "Can't open: $@", {item_id=>$prog0});
+                $envres->add_result(500, "Can't open '$comppath': $@", {item_id=>$prog0});
                 next;
             };
             unless ($content =~ /^# FRAGMENT id=shcompgen-header note=(.+)\b/m) {
                 $log->debugf("Skipping %s, not installed by us", $prog0);
+                $envres->add_result(304, "Not installed by us", {item_id=>$prog0});
                 next;
             }
             $log->infof("Unlinking %s ...", $comppath);
