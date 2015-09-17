@@ -1,5 +1,11 @@
 Revision history for App-shcompgen
 
+0.13    2015-09-17 (PERLANCAR)
+
+	- Adjust to Complete::Util 0.36 (complete_file() &
+	  complete_program() split to Complete-File & Complete-Program).
+
+
 0.12    2015-09-03 (PERLANCAR)
 
 	- No functional changes.
