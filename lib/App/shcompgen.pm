@@ -477,20 +477,21 @@ searched from PATH.
 
 _
             element_completion => sub {
-                require Complete::Util;
+                require Complete::File;
+                require Complete::Program;
 
                 my %args = @_;
                 my $word = $args{word} // '';
                 if ($word =~ m!/!) {
                     # user might want to mention a program file (e.g. ./foo)
                     return {
-                        words => Complete::Util::complete_file(
+                        words => Complete::File::complete_file(
                             word=>$word, ci=>1, filter=>'d|rxf'),
                         path_sep => '/',
                     };
                 } else {
                     # or user might want to mention a program in PATH
-                    Complete::Util::complete_program(word=>$word, ci=>1);
+                    Complete::Program::complete_program(word=>$word, ci=>1);
                 }
             },
         },
