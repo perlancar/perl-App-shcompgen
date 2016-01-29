@@ -148,12 +148,40 @@ sub _gen_completion_script {
     my $qprog  = String::ShellQuote::shell_quote($prog);
     my $comp   = $detres->[3]{'func.completer_command'};
     my $qcomp  = String::ShellQuote::shell_quote($comp);
+    my $args   = $detres->[3]{'func.completer_command_args'};
+    my $qargs  = String::ShellQuote::shell_quote($args) if defined $args;
 
     my $script;
     if ($shell eq 'bash') {
-        if ($comp) {
+        if (defined $args) {
+            $script = q|
+_|.$prog.q| ()
+{
+    local words
+    words=("${COMP_WORDS[@]:0:1}")
+    # insert arguments into the second element
+    words+=(|.$qargs.q|)
+    words+=("${COMP_WORDS[@]:1:COMP_CWORD}")
+    local s1="${words[@]}"
+    local point=${#s1}
+    words+=("${COMP_WORDS[@]:COMP_CWORD+1}")
+
+    #echo "D:words = ${words[@]}"
+    #echo "D:point = $point"
+
+    #echo "D:cmd = COMP_LINE=\"${words[@]}\" COMP_POINT=$point |.$comp.q|"
+
+    COMPREPLY=( `COMP_LINE="${words[@]}" COMP_POINT=$point |.$comp.q|` )
+
+    #echo "D:reply = ${COMPREPLY[@]}"
+}
+complete -F _|."$prog $qprog".q|
+|;
+        } else {
             $script = "complete -C $qcomp $qprog";
         }
+    } else {
+        die "Sorry, shells other than bash are not supported yet";
     }
 
     # fish
@@ -230,12 +258,19 @@ sub _detect_prog {
     my $content = do { local $/; ~~<$fh> };
 
     if ($content =~
-            /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)\s*$/m
+            /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)(?:\s+command_args=(.+))?\s*$/m
                 && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
         # program give hints in its source code that it can be completed using a
         # certain command
+        my $cmd = $1;
+        my $args = $2;
+        if (defined($args) && $args =~ s/\A"//) {
+            $args =~ s/"\z//;
+            $args =~ s/\\(.)/$1/g;
+        }
         return [200, "OK", 1, {
-            "func.completer_command" => $1,
+            "func.completer_command" => $cmd,
+            "func.completer_command_args" => $args,
             "func.note" => "hint(command)",
         }];
     } elsif ($content =~
