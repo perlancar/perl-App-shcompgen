@@ -1,5 +1,10 @@
 Revision history for App-shcompgen
 
+0.14    2016-01-29 (PERLANCAR)
+
+	- Use command_args=... attribute in shcompgen-hint text fragment.
+
+
 0.13    2015-09-17 (PERLANCAR)
 
 	- Adjust to Complete::Util 0.36 (complete_file() &
