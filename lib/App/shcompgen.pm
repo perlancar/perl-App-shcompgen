@@ -320,7 +320,7 @@ sub _detect_prog {
 }
 
 sub _generate_or_remove {
-    my $which = shift;
+    my $which0 = shift;
     my %args = @_;
 
     _set_args_defaults(\%args);
@@ -349,6 +349,7 @@ sub _generate_or_remove {
             }
         }
 
+        my $which = $which0;
         if ($which eq 'generate') {
             my $detres = _detect_prog(prog=>$prog, progpath=>$progpath);
             if ($detres->[0] != 200) {
@@ -359,8 +360,12 @@ sub _generate_or_remove {
             }
             $log->debugf("Detection result for '%s': %s", $prog, $detres);
             if (!$detres->[2]) {
-                # we simply ignore undetected programs
-                next PROG;
+                if ($args{remove}) {
+                    $which = 'remove';
+                    goto REMOVE;
+                } else {
+                    next PROG;
+                }
             }
 
             my $script = _gen_completion_script(
@@ -385,6 +390,7 @@ sub _generate_or_remove {
             }
         } # generate
 
+      REMOVE:
         if ($which eq 'remove') {
             my $comppath = _completion_script_path(%args, prog => $prog);
             unless (-f $comppath) {
@@ -547,10 +553,22 @@ _
         },
         replace => {
             summary => 'Replace existing script',
-            schema  => 'bool*',
+            schema  => ['bool*', is=>1],
             description => <<'_',
 
 The default behavior is to skip if an existing completion script exists.
+
+_
+        },
+        remove => {
+            summary => 'Remove completion for script that (now) is '.
+                'not detected to have completion',
+            schema  => ['bool*', is=>1],
+            description => <<'_',
+
+The default behavior is to simply ignore existing completion script if the
+program is not detected to have completion. When the `remove` setting is
+enabled, however, such existing completion script will be removed.
 
 _
         },
