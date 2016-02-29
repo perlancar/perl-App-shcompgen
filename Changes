@@ -1,5 +1,13 @@
 Revision history for App-shcompgen
 
+0.15    2016-02-29 (PERLANCAR)
+
+	- generate: Add option --remove.
+
+	- Use Perinci::CmdLine::Util's detect_perinci_cmdline_script to be
+	  able to handle # NO_PERINCI_CMDLINE_SCRIPT etc.
+
+
 0.14    2016-01-29 (PERLANCAR)
 
 	- Use command_args=... attribute in shcompgen-hint text fragment.
