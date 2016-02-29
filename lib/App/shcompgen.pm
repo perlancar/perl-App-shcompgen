@@ -9,7 +9,7 @@ use warnings;
 use experimental 'smartmatch';
 use Log::Any::IfLOG '$log';
 
-use File::Slurp::Tiny qw(read_file write_file);
+use File::Slurper qw(read_text write_text);
 use Perinci::Object;
 use Perinci::Sub::Util qw(err);
 
@@ -257,50 +257,65 @@ sub _detect_prog {
     seek $fh, 0, 0;
     my $content = do { local $/; ~~<$fh> };
 
-    if ($content =~
-            /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)(?:\s+command_args=(.+))?\s*$/m
+  DETECT:
+    {
+        if ($content =~
+                /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)(?:\s+command_args=(.+))?\s*$/m
                 && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
-        # program give hints in its source code that it can be completed using a
-        # certain command
-        my $cmd = $1;
-        my $args = $2;
-        if (defined($args) && $args =~ s/\A"//) {
-            $args =~ s/"\z//;
-            $args =~ s/\\(.)/$1/g;
+            # program give hints in its source code that it can be completed using a
+            # certain command
+            my $cmd = $1;
+            my $args = $2;
+            if (defined($args) && $args =~ s/\A"//) {
+                $args =~ s/"\z//;
+                $args =~ s/\\(.)/$1/g;
+            }
+            return [200, "OK", 1, {
+                "func.completer_command" => $cmd,
+                "func.completer_command_args" => $args,
+                "func.note" => "hint(command)",
+            }];
         }
-        return [200, "OK", 1, {
-            "func.completer_command" => $cmd,
-            "func.completer_command_args" => $args,
-            "func.note" => "hint(command)",
-        }];
-    } elsif ($content =~
-            /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m
-                && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
-        my $completee = $1;
-        return [400, "completee specified in '$progpath' is not a valid ".
-                    "program name: $completee"]
-            unless $completee =~ $re_progname;
-        return [200, "OK", 1, {
-            "func.completer_command" => $prog,
-            "func.completee" => $completee,
-            "func.note"=>"hint(completer)",
-        }];
-    } elsif ($is_perl_script && $content =~
-                 /^\s*(use|require)\s+(Perinci::CmdLine(?:::Any|::Lite|::Classic)?)\b/m) {
-        return [200, "OK", 1, {
-            "func.completer_command"=> $prog,
-            "func.completer_type"=> $2,
-            "func.note"=>$2,
-        }];
-    } elsif ($is_perl_script && $content =~
-                 /^\s*(use|require)\s+(Getopt::Long::(?:Complete|Subcommand))\b/m) {
-        return [200, "OK", 1, {
-            "func.completer_command"=> $prog,
-            "func.completer_type"=> $2,
-            "func.note"=>$2,
-        }];
+        if($content =~
+               /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m
+               && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
+            my $completee = $1;
+            return [400, "completee specified in '$progpath' is not a valid ".
+                        "program name: $completee"]
+                unless $completee =~ $re_progname;
+            return [200, "OK", 1, {
+                "func.completer_command" => $prog,
+                "func.completee" => $completee,
+                "func.note"=>"hint(completer)",
+            }];
+        }
+        if ($is_perl_script &&
+                # regex split here because i found a pathological case of very
+                # long matching time againt 'rsybak' datapacked script (~ 4M)
+                $content =~ /^\s*(use|require)\s+Getopt::Long::Complete\b/m ||
+                $content =~ /^\s*(use|require)\s+Getopt::Long::Subcommand\b/m) {
+            return [200, "OK", 1, {
+                "func.completer_command"=> $prog,
+                "func.completer_type"=> $2,
+                "func.note"=>$2,
+            }];
+        }
+
+      DETECT_PERICMD:
+        {
+            last unless $is_perl_script;
+            require Perinci::CmdLine::Util;
+            my $det_res = Perinci::CmdLine::Util::detect_perinci_cmdline_script(
+                string => $content);
+            $log->tracef("Perinci::CmdLine detection result: %s", $det_res);
+            last unless $det_res->[2];
+            return [200, "OK", 1, {
+                "func.completer_command"=> $prog,
+                "func.completer_type"=> "Perinci::CmdLine",
+                "func.note"=>"detected using Perinci::CmdLine::Util",
+            }];
+        }
     }
-    # XXX Getopt::Long::Subcommand
     [200, "OK", 0];
 }
 
@@ -361,7 +376,7 @@ sub _generate_or_remove {
                 }
             }
             $log->infof("Writing completion script to %s ...", $comppath);
-            eval { write_file($comppath, $script) };
+            eval { write_text($comppath, $script) };
             if ($@) {
                 $envres->add_result(500, "Can't write to '$comppath': $@",
                                     {item_id=>$prog0});
@@ -378,7 +393,7 @@ sub _generate_or_remove {
                 next PROG;
             }
             my $content;
-            eval { $content = read_file($comppath) };
+            eval { $content = read_text($comppath) };
             if ($@) {
                 $envres->add_result(500, "Can't open '$comppath': $@", {item_id=>$prog0});
                 next;
@@ -485,7 +500,7 @@ _
         }
     }
 
-    write_file($init_script_path, $init_script);
+    write_text($init_script_path, $init_script);
     $instruction .= "Please put this into your $init_location:".
         "\n\n" . " . $init_script_path\n\n";
 
@@ -579,7 +594,7 @@ sub list {
                 %args, dir=>$dir, prog=>$prog);
             $log->debugf("Checking completion script '%s' ...", $comppath);
             my $content;
-            eval { $content = read_file($comppath) };
+            eval { $content = read_text($comppath) };
             if ($@) {
                 $log->warnf("Can't open file '%s': %s", $comppath, $@);
                 next;
