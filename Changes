@@ -1,5 +1,10 @@
 Revision history for App-shcompgen
 
+0.17    2016-04-30 (PERLANCAR)
+
+	- Avoid perl undef warning.
+
+
 0.16    2016-04-30 (PERLANCAR)
 
 	- No functional changes.
