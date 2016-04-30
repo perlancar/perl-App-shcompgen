@@ -1,5 +1,14 @@
 Revision history for App-shcompgen
 
+0.16    2016-04-30 (PERLANCAR)
+
+	- No functional changes.
+
+	- [doc] Update documentation: remove EARLY RELEASE label, document
+	  about detecting Getopt::Long::Subcommand-based scripts, update
+	  dzil plugin name in mention.
+
+
 0.15    2016-02-29 (PERLANCAR)
 
 	- generate: Add option --remove.
