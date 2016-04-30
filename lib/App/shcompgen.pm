@@ -188,8 +188,8 @@ complete -F _|."$prog $qprog".q|
     # - completer_command -> check completer command if it's pericmd or
     # glcomp or glsubc
 
-    $script = "# FRAGMENT id=shcompgen-header note=".$detres->[3]{'func.note'}.
-        "\n$script\n";
+    $script = "# FRAGMENT id=shcompgen-header note=".
+        ($detres->[3]{'func.note'} // ''). "\n$script\n";
 
     $script;
 }
