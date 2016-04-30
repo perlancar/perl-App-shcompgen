@@ -62,8 +62,7 @@ Remove all generated shell completion scripts:
 
 =head1 DESCRIPTION
 
-B<NOTE: EARLY RELEASE. ONLY BASH SUPPORT HAS BEEN ADDED. SUPPORT FOR THE OTHER
-SHELLS WILL FOLLOW.>
+B<ONLY BASH SUPPORT HAS BEEN ADDED. SUPPORT FOR THE OTHER SHELLS WILL FOLLOW.>
 
 Some shells, like bash/fish/zsh, supports tab completion for programs. They are
 usually activated by issuing one or more C<complete> (zsh uses C<compctl>)
@@ -118,14 +117,6 @@ for bash:
 
  complete -C bar foo
 
-=item * Getopt::Long::Complete-based CLI scripts
-
-If a script like C<foo> is detected as a Perl script using
-L<Getopt::Long::Complete>, we know that it can complete itself. Thus,
-C<shcompgen> will generate this completion script (e.g. for bash):
-
- complete -C foo foo
-
 =item * Completion programs which are tagged with hints of what programs they complete
 
 You can create a completion script in Perl (or other language, actually), e.g.
@@ -140,6 +131,22 @@ This will add completion script for C<foo>:
 as well as for C<foo-this-host>:
 
  complete -C _foo foo-this-host
+
+=item * Getopt::Long::Complete-based CLI scripts
+
+If a script C<foo> is detected as a Perl script using L<Getopt::Long::Complete>,
+we know that it can complete itself. Thus, C<shcompgen> will generate this
+completion script (e.g. for bash):
+
+ complete -C foo foo
+
+=item * Getopt::Long::Subcommand-based CLI scripts
+
+If a script C<foo> is detected as a Perl script using
+L<Getopt::Long::Subcommand>, we know that it can complete itself. Thus,
+C<shcompgen> will generate this completion script (e.g. for bash):
+
+ complete -C foo foo
 
 =item * Perinci::CmdLine-based CLI scripts
 
@@ -160,4 +167,4 @@ so on.
 
 =head1 SEE ALSO
 
-L<Dist::Zilla::Plugin::Rinci::InstallCompletion>
+L<Dist::Zilla::Plugin::GenShellCompletion>
