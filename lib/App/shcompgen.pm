@@ -309,6 +309,10 @@ sub _detect_prog {
                 string => $content);
             $log->tracef("Perinci::CmdLine detection result: %s", $det_res);
             last unless $det_res->[2];
+
+            # pericmd-inline doesn't currently support self-completion
+            last if $det_res->[3]{'func.is_inline'};
+
             return [200, "OK", 1, {
                 "func.completer_command"=> $prog,
                 "func.completer_type"=> "Perinci::CmdLine",
