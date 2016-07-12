@@ -1,5 +1,14 @@
 Revision history for App-shcompgen
 
+0.19    2016-07-12 (PERLANCAR)
+
+	- [Bugfix] Don't remove completion script we created in the same
+	  run (this fixes e.g. 'shcompgen _hr hr' when hr changes from
+	  Perinci::CmdLine::Lite to Perinci::CmdLine::Inline where
+	  previously the completion script created by processing _hr would
+	  be immediately deleted when hr results in negative).
+
+
 0.18    2016-07-12 (PERLANCAR)
 
 	- [Bugfix] Perinci::CmdLine::Inline-based scripts currently cannot
