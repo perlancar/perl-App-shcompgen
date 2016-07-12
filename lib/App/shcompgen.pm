@@ -329,6 +329,9 @@ sub _generate_or_remove {
 
     _set_args_defaults(\%args);
 
+    # to avoid writing a file and then removing the file again in the same run
+    my %written_files;
+
     my $envres = envresmulti();
   PROG:
     for my $prog0 (@{ $args{prog} }) {
@@ -385,6 +388,7 @@ sub _generate_or_remove {
                 }
             }
             $log->infof("Writing completion script to %s ...", $comppath);
+            $written_files{$comppath}++;
             eval { write_text($comppath, $script) };
             if ($@) {
                 $envres->add_result(500, "Can't write to '$comppath': $@",
@@ -411,7 +415,11 @@ sub _generate_or_remove {
             unless ($content =~ /^# FRAGMENT id=shcompgen-header note=(.+)\b/m) {
                 $log->debugf("Skipping %s, not installed by us", $prog0);
                 $envres->add_result(304, "Not installed by us", {item_id=>$prog0});
-                next;
+                next PROG;
+            }
+            if ($written_files{$comppath}) {
+                # not removing files we already wrote
+                next PROG;
             }
             $log->infof("Unlinking %s ...", $comppath);
             if (unlink $comppath) {
