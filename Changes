@@ -1,5 +1,11 @@
 Revision history for App-shcompgen
 
+0.18    2016-07-12 (PERLANCAR)
+
+	- [Bugfix] Perinci::CmdLine::Inline-based scripts currently cannot
+	  self-complete.
+
+
 0.17    2016-04-30 (PERLANCAR)
 
 	- Avoid perl undef warning.
