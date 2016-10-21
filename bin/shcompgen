@@ -17,6 +17,7 @@ Perinci::CmdLine::Any->new(
     url => $urlprefix,
     log => $ENV{LOG} // 1,
     subcommands => {
+        'guess-shell' => {url=>"${urlprefix}guess_shell"},
         init     => {url=>"${urlprefix}init"},
         generate => {url=>"${urlprefix}generate"},
         list     => {url=>"${urlprefix}list"},

@@ -117,8 +117,13 @@ sub _all_exec_in_PATH {
 sub _set_args_defaults {
     my $args = shift;
 
-    if (!$args->{shell}) { ($args->{shell} = $ENV{SHELL} // '') =~ s!.+/!! }
-    if (!$args->{shell}) { $args->{shell} = 'bash' }
+    if (!$args->{shell}) {
+        require Shell::Guess;
+        my $sh = Shell::Guess->running_shell;
+        my $n = $sh->{name};
+        $n = "zsh" if $n eq 'z';
+        $args->{shell} = $n;
+    }
     unless ($args->{shell} ~~ @supported_shells) {
         return [412, "Unsupported shell '$args->{shell}'"];
     }
@@ -433,6 +438,19 @@ sub _generate_or_remove {
     } # for prog0
 
     $envres->as_struct;
+}
+
+$SPEC{guess_shell} = {
+    v => 1.1,
+    summary => 'Guess running shell',
+    args => {
+    },
+};
+sub guess_shell {
+    my %args = @_;
+
+    _set_args_defaults(\%args);
+    [200, "OK", $args{shell}];
 }
 
 $SPEC{init} = {
