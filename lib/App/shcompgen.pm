@@ -385,6 +385,11 @@ sub _generate_or_remove {
             my $comppath = _completion_script_path(
                 %args, prog => $prog, detect_res => $detres);
 
+            if ($args{stdout}) {
+                print $script;
+                next PROG;
+            }
+
             if (-f $comppath) {
                 if (!$args{replace}) {
                     $log->infof("Not replacing completion script for $prog in '$comppath' (use --replace to replace)");
@@ -635,6 +640,10 @@ program is not detected to have completion. When the `remove` setting is
 enabled, however, such existing completion script will be removed.
 
 _
+        },
+        stdout => {
+            summary => 'Output completion script to STDOUT',
+            schema => ['bool', is=>1],
         },
     },
 };
