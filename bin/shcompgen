@@ -61,7 +61,8 @@ Remove all generated shell completion scripts:
 
 =head1 DESCRIPTION
 
-B<ONLY BASH SUPPORT HAS BEEN ADDED. SUPPORT FOR THE OTHER SHELLS WILL FOLLOW.>
+B<ONLY BASH AND FISH SUPPORT HAS BEEN ADDED. SUPPORT FOR THE OTHER SHELLS WILL
+FOLLOW.>
 
 Some shells, like bash/fish/zsh, supports tab completion for programs. They are
 usually activated by issuing one or more C<complete> (zsh uses C<compctl>)
@@ -92,6 +93,10 @@ scripts. If later on C<bash-completion> package decides on a different per-user
 location, this script will probably be adjusted too.
 
 =head2 fish-specific information
+
+Support for fish is rather new. There might be bugs. Some scripts have not been
+supported, e.g. L<Getopt::Long::Subcommand>-based scripts or
+L<Perinci::CmdLine>-based scripts which have subcommands.
 
 =head2 tcsh-specific information
 
