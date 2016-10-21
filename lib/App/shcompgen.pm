@@ -599,6 +599,7 @@ $SPEC{list} = {
         %common_args,
         detail => {
             schema => 'bool',
+            cmdline_aliases => {l=>{}},
         },
     },
 };
