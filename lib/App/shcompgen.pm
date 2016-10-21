@@ -22,18 +22,34 @@ $SPEC{':package'} = {
     summary => 'Generate shell completion scripts',
 };
 
-our @supported_shells = qw(bash); # XXX fish tcsh zsh
-our %common_args = (
+my $_complete_prog = sub {
+    require Complete::File;
+    require Complete::Program;
+
+    my %args = @_;
+    my $word = $args{word} // '';
+    if ($word =~ m!/!) {
+        # user might want to mention a program file (e.g. ./foo)
+        return {
+            words => Complete::File::complete_file(
+                word=>$word, ci=>1, filter=>'d|rxf'),
+            path_sep => '/',
+        };
+    } else {
+        # or user might want to mention a program in PATH
+        Complete::Program::complete_program(word=>$word, ci=>1);
+    }
+};
+
+our @supported_shells = qw(bash fish); # XXX tcsh zsh
+our %shell_arg = (
     shell => {
-        summary => 'Override autodetection and select shell manually',
+        summary => 'Override guessing and select shell manually',
         schema => ['str*', {in=>\@supported_shells}],
-        description => <<'_',
-
-The default is to look at your SHELL environment variable value. If it is
-undefined, the default is `bash`.
-
-_
     },
+);
+our %common_args = (
+    %shell_arg,
     global => {
         summary => 'Use global completions directory',
         schema => ['bool*'],
@@ -68,15 +84,15 @@ _
         schema  => ['array*', of => 'str*'],
     },
 
-    #fish_global_dir => {
-    #    summary => 'Directory to put completions scripts',
-    #    schema  => ['array*', of => 'str*'],
-    #    default => ['/usr/share/fish/completions', '/etc/fish/completions'],
-    #},
-    #fish_per_user_dir => {
-    #    summary => 'Directory to put completions scripts',
-    #    schema  => ['array*', of => 'str*'],
-    #},
+    fish_global_dir => {
+        summary => 'Directory to put completions scripts',
+        schema  => ['array*', of => 'str*'],
+        default => ['/usr/share/fish/completions', '/etc/fish/completions'],
+    },
+    fish_per_user_dir => {
+        summary => 'Directory to put completions scripts',
+        schema  => ['array*', of => 'str*'],
+    },
 
     #tcsh_global_dir => {
     #    summary => 'Directory to put completions scripts',
@@ -136,10 +152,10 @@ sub _set_args_defaults {
     $args->{fish_global_dir}   //= ['/usr/share/fish/completions',
                                     '/etc/fish/completions'];
     $args->{fish_per_user_dir} //= ["$ENV{HOME}/.config/fish/completions"];
-    $args->{tcsh_global_dir}   //= [];
-    $args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
-    $args->{zsh_global_dir}    //= [];
-    $args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
+    #$args->{tcsh_global_dir}   //= [];
+    #$args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
+    #$args->{zsh_global_dir}    //= [];
+    #$args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
 }
 
 sub _gen_completion_script {
@@ -185,14 +201,44 @@ complete -F _|."$prog $qprog".q|
         } else {
             $script = "complete -C $qcomp $qprog";
         }
+    } elsif ($shell eq 'fish') {
+        require File::Which;
+        my $path = File::Which::which($comp);
+        my $type = $detres->[3]{'func.completer_type'};
+        if ($type eq 'Getopt::Long' || $type eq 'Getopt::Long::Complete') {
+            require Complete::Fish::Gen::FromGetoptLong;
+            my $gen_res = Complete::Fish::Gen::FromGetoptLong::gen_fish_complete_from_getopt_long_script(
+                filename => $path,
+                cmdname => $prog,
+                compname => $comp,
+            );
+            if ($gen_res->[0] != 200) {
+                $log->errorf("Can't generate fish completion script for '%s': %s", $path, $gen_res);
+                $script = "# Can't generate fish completion script for '$path': $gen_res->[0] - $gen_res->[1]\n";
+                goto L1;
+            }
+            $script = $gen_res->[2];
+        } elsif ($type eq 'Perinci::CmdLine') {
+            require Complete::Fish::Gen::FromPerinciCmdLine;
+            my $gen_res = Complete::Fish::Gen::FromPerinciCmdLine::gen_fish_complete_from_perinci_cmdline_script(
+                filename => $path,
+                cmdname => $prog,
+                compname => $comp,
+            );
+            if ($gen_res->[0] != 200) {
+                $log->errorf("Can't generate fish completion script for '%s': %s", $path, $gen_res);
+                $script = "# Can't generate fish completion script for '$path': $gen_res->[0] - $gen_res->[1]\n";
+                goto L1;
+            }
+            $script = $gen_res->[2];
+        } else {
+            $script = "# TODO for type=$type\n";
+        }
     } else {
-        die "Sorry, shells other than bash are not supported yet";
+        die "Sorry, shells other than bash/fish are not supported yet";
     }
 
-    # fish
-    # - completer_command -> check completer command if it's pericmd or
-    # glcomp or glsubc
-
+  L1:
     $script = "# FRAGMENT id=shcompgen-header note=".
         ($detres->[3]{'func.note'} // ''). "\n$script\n";
 
@@ -244,10 +290,12 @@ sub _completion_script_path {
     $path;
 }
 
-# XXX plugin based
+# detect whether we can generate completion script for a program, under a given
+# shell
 sub _detect_prog {
     my %args = @_;
 
+    my $shell    = $args{shell};
     my $prog     = $args{prog};
     my $progpath = $args{progpath};
 
@@ -262,6 +310,8 @@ sub _detect_prog {
     seek $fh, 0, 0;
     my $content = do { local $/; ~~<$fh> };
 
+    my %extrametas;
+
   DETECT:
     {
         if ($content =~
@@ -275,34 +325,123 @@ sub _detect_prog {
                 $args =~ s/"\z//;
                 $args =~ s/\\(.)/$1/g;
             }
+            if ($shell eq 'fish') {
+                # for fish, we need to make sure first that we can extract
+                # cmdline-options from the completer program
+                require File::Which;
+                my $cmdpath = File::Which::which($cmd);
+                my $cmddet_res = _detect_prog(
+                    prog => $cmd,
+                    progpath => $cmdpath,
+                    shell => $shell,
+                );
+                my $reason;
+                {
+                    if ($cmddet_res->[0] != 200) {
+                        $reason = "$cmddet_res->[0] - $cmddet_res->[1]";
+                        last;
+                    }
+                    if (!$cmddet_res->[2]) {
+                        $reason = "'$cmd' is not supported by shcompgen";
+                    }
+                    if ($cmddet_res->[3]{'completer_command'} &&
+                            $cmddet_res->[3]{'completer_command'} ne $cmd) {
+                        $reason = "multiple indirection of completer is currently not supported";
+                        last;
+                    }
+                    if ($cmddet_res->[3]{'func.completer_type'} && $cmddet_res->[3]{'func.completer_type'} !~
+                            /^(Getopt::Long(::Complete)?|Perinci::CmdLine(?:::\w+)?)$/) {
+                        $reason = "currently only Getopt::Long-/Getopt::Long::Complete-/Perinci::CmdLine-based scripts are supported";
+                        last;
+                    }
+                    $extrametas{'func.completer_type'} =
+                        $cmddet_res->[3]{'func.completer_type'};
+                }
+                return [200, "Program '$prog' is completed by ".
+                            "'$cmd' (hint(command)), but we don't support ".
+                            "creating completion script with '$cmd'".
+                            ": $reason", 0]
+                    if $reason;
+            }
             return [200, "OK", 1, {
                 "func.completer_command" => $cmd,
                 "func.completer_command_args" => $args,
                 "func.note" => "hint(command)",
+                %extrametas,
             }];
         }
-        if($content =~
+        if(!$args{_skip_completer_hint} &&
+               $content =~
                /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m
                && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
             my $completee = $1;
             return [400, "completee specified in '$progpath' is not a valid ".
                         "program name: $completee"]
                 unless $completee =~ $re_progname;
+            if ($shell eq 'fish') {
+                # for fish, we need to make sure first that we can extract
+                # cmdline-options from the completer program
+                require File::Which;
+                my $det_res2 = _detect_prog(
+                    prog => $prog,
+                    progpath => $progpath,
+                    shell => $shell,
+                    _skip_completer_hint=>1,
+                );
+                my $reason;
+                {
+                    if ($det_res2->[0] != 200) {
+                        $reason = "$det_res2->[0] - $det_res2->[1]";
+                        last;
+                    }
+                    if (!$det_res2->[2]) {
+                        $reason = "'$prog' is not supported by shcompgen";
+                    }
+                    if ($det_res2->[3]{'completer_command'} &&
+                            $det_res2->[3]{'completer_command'} ne $prog) {
+                        $reason = "multiple indirection of completer is currently not supported";
+                        last;
+                    }
+                    if ($det_res2->[3]{'func.completer_type'} && $det_res2->[3]{'func.completer_type'} !~
+                            /^(Getopt::Long(::Complete|::Subcommand)?|Perinci::CmdLine(?:::\w+)?)$/) {
+                        $reason = "currently only Getopt::Long-/Getopt::Long::Complete-/Perinci::CmdLine-based scripts are supported";
+                        last;
+                    }
+                    $extrametas{'func.completer_type'} = $det_res2->[3]{'func.completer_type'};
+                }
+                return [200, "Program '$prog' is a completer for ".
+                            "'$completee' (hint(completer)), but we don't support ".
+                            "creating completion script with '$prog'".
+                            ": $reason", 0]
+                    if $reason;
+            }
             return [200, "OK", 1, {
                 "func.completer_command" => $prog,
                 "func.completee" => $completee,
                 "func.note"=>"hint(completer)",
+                %extrametas,
             }];
         }
+
         if ($is_perl_script &&
                 # regex split here because i found a pathological case of very
                 # long matching time againt 'rsybak' datapacked script (~ 4M)
-                $content =~ /^\s*(use|require)\s+Getopt::Long::Complete\b/m ||
-                $content =~ /^\s*(use|require)\s+Getopt::Long::Subcommand\b/m) {
+                $content =~ /^\s*((?:use|require)\s+(Getopt::Long::Complete))\b/m ||
+                $shell ne 'fish' &&
+                $content =~ /^\s*((?:use|require)\s+(Getopt::Long::Subcommand))\b/m) {
             return [200, "OK", 1, {
                 "func.completer_command"=> $prog,
                 "func.completer_type"=> $2,
-                "func.note"=>$2,
+                "func.note"=>"perl use/require statement: $1",
+            }];
+        }
+
+        if ($shell eq 'fish' && $is_perl_script &&
+                $content =~ /^\s*((?:use|require)\s+(Getopt::Long))\b/m) {
+            return [200, "OK", 1, {
+                "func.completer_command" => $prog,
+                "func.completer_type" => $1,
+                "func.note"=>"perl use/require statement: $1",
             }];
         }
 
@@ -322,6 +461,7 @@ sub _detect_prog {
                 "func.completer_command"=> $prog,
                 "func.completer_type"=> "Perinci::CmdLine",
                 "func.note"=>"detected using Perinci::CmdLine::Util",
+                "func.pericmd_detect_result" => $det_res,
             }];
         }
     }
@@ -363,7 +503,7 @@ sub _generate_or_remove {
 
         my $which = $which0;
         if ($which eq 'generate') {
-            my $detres = _detect_prog(prog=>$prog, progpath=>$progpath);
+            my $detres = _detect_prog(prog=>$prog, progpath=>$progpath, shell=>$args{shell});
             if ($detres->[0] != 200) {
                 $log->errorf("Can't detect '%s': %s", $prog, $detres->[1]);
                 $envres->add_result($detres->[0], $detres->[1],
@@ -601,24 +741,7 @@ Can contain path (e.g. `../foo`) or a plain word (`foo`) in which case will be
 searched from PATH.
 
 _
-            element_completion => sub {
-                require Complete::File;
-                require Complete::Program;
-
-                my %args = @_;
-                my $word = $args{word} // '';
-                if ($word =~ m!/!) {
-                    # user might want to mention a program file (e.g. ./foo)
-                    return {
-                        words => Complete::File::complete_file(
-                            word=>$word, ci=>1, filter=>'d|rxf'),
-                        path_sep => '/',
-                    };
-                } else {
-                    # or user might want to mention a program in PATH
-                    Complete::Program::complete_program(word=>$word, ci=>1);
-                }
-            },
+            element_completion => $_complete_prog,
         },
         replace => {
             summary => 'Replace existing script',
