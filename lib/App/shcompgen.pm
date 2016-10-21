@@ -156,6 +156,7 @@ sub _set_args_defaults {
     #$args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
     #$args->{zsh_global_dir}    //= [];
     #$args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
+    [200];
 }
 
 sub _gen_completion_script {
@@ -472,7 +473,8 @@ sub _generate_or_remove {
     my $which0 = shift;
     my %args = @_;
 
-    _set_args_defaults(\%args);
+    my $setdef_res = _set_args_defaults(\%args);
+    return $setdef_res unless $setdef_res->[0] == 200;
 
     # to avoid writing a file and then removing the file again in the same run
     my %written_files;
@@ -594,7 +596,9 @@ $SPEC{guess_shell} = {
 sub guess_shell {
     my %args = @_;
 
-    _set_args_defaults(\%args);
+    my $setdef_res = _set_args_defaults(\%args);
+    return $setdef_res unless $setdef_res->[0] == 200;
+
     [200, "OK", $args{shell}];
 }
 
@@ -648,7 +652,9 @@ _
 sub init {
     my %args = @_;
 
-    _set_args_defaults(\%args);
+    my $setdef_res = _set_args_defaults(\%args);
+    return $setdef_res unless $setdef_res->[0] == 200;
+
     my $shell = $args{shell};
     my $global = $args{global};
 
@@ -702,6 +708,9 @@ _
         } else {
             $init_script_path = "$ENV{HOME}/.config/shcompgen.bashrc";
         }
+    } elsif ($shell eq 'fish') {
+        # nothing to do, should be ready
+        return [200, "OK"];
     } else {
         return [412, "Shell '$shell' not yet supported"];
     }
@@ -790,7 +799,8 @@ $SPEC{list} = {
 sub list {
     my %args = @_;
 
-    _set_args_defaults(\%args);
+    my $setdef_res = _set_args_defaults(\%args);
+    return $setdef_res unless $setdef_res->[0] == 200;
 
     my @res;
     my $resmeta = {};
