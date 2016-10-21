@@ -41,10 +41,6 @@ Generate shell completion scripts for all detectable programs in PATH:
 
  % shcompgen generate
 
-Note that this distribution automatically runs 'init' and 'generate' the first
-time it is installed, or when you upgrade from an older version. So normally you
-don't have to do this manually.
-
 Generate some programs only, replace if previously already exists, be verbose:
 
  % shcompgen generate --verbose --replace prog1 prog2 ./bin/prog3
