@@ -1,5 +1,19 @@
 Revision history for App-shcompgen
 
+0.20    2016-10-21 (PERLANCAR)
+
+        - [Enhancement] Add support for fish shell.
+
+        - [Enhancement] Add subcommands (for utility/testing): guess-shell,
+          detect-prog.
+
+        - [doc] Remove note about 'init' and 'generate' being run the first time
+          it's installed because it doesn't work usually because we detect shell
+          as 'bourne' under make and bail.
+
+        - generate: Add option --stdout.
+
+
 0.19    2016-07-12 (PERLANCAR)
 
 	- [Bugfix] Don't remove completion script we created in the same
