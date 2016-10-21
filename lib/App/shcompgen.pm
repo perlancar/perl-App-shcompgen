@@ -609,6 +609,7 @@ sub list {
     _set_args_defaults(\%args);
 
     my @res;
+    my $resmeta = {};
     my $dirs = _completion_scripts_dirs(%args);
     for my $dir (@$dirs) {
         $log->debugf("Opening dir %s ...", $dir);
@@ -647,7 +648,9 @@ sub list {
         }
     } # for $dir
 
-    [200, "OK", \@res];
+    $resmeta->{'table.fields'} = [qw/prog path note/] if $args{detail};
+
+    [200, "OK", \@res, $resmeta];
 }
 
 $SPEC{remove} = {
