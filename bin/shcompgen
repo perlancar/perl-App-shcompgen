@@ -17,11 +17,13 @@ Perinci::CmdLine::Any->new(
     url => $urlprefix,
     log => $ENV{LOG} // 1,
     subcommands => {
-        'guess-shell' => {url=>"${urlprefix}guess_shell"},
         init     => {url=>"${urlprefix}init"},
         generate => {url=>"${urlprefix}generate"},
         list     => {url=>"${urlprefix}list"},
         remove   => {url=>"${urlprefix}remove"},
+
+        'guess-shell' => {url=>"${urlprefix}guess_shell", summary => "(Utility) detect a program", tags=>["category:utility"]},
+        'detect-prog' => {url=>"${urlprefix}detect_prog", summary => "(Utility) Guess running shell", tags=>["category:utility"]},
     },
 )->run;
 

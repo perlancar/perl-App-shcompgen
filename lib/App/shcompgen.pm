@@ -453,6 +453,40 @@ sub guess_shell {
     [200, "OK", $args{shell}];
 }
 
+$SPEC{detect_prog} = {
+    v => 1.1,
+    summary => "Detect a program",
+    args => {
+        %shell_arg,
+        prog => {
+            schema => 'str*',
+            completion => $_complete_prog,
+            req => 1,
+            pos => 0,
+        },
+    },
+    'cmdline.default_format' => 'json',
+};
+sub detect_prog {
+    require File::Which;
+
+    my %args = @_;
+
+    _set_args_defaults(\%args);
+
+    my $progname = $args{prog};
+    my $progpath = File::Which::which($progname);
+
+    return [404, "No such program '$progname'"] unless $progpath;
+    $progname =~ s!.+/!!;
+
+    _detect_prog(
+        prog => $progname,
+        progpath => $progpath,
+        shell => $args{shell},
+    );
+}
+
 $SPEC{init} = {
     v => 1.1,
     summary => 'Initialize shcompgen',
