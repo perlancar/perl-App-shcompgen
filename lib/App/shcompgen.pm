@@ -441,7 +441,7 @@ sub _detect_prog {
                 $content =~ /^\s*((?:use|require)\s+(Getopt::Long))\b/m) {
             return [200, "OK", 1, {
                 "func.completer_command" => $prog,
-                "func.completer_type" => $1,
+                "func.completer_type" => $2,
                 "func.note"=>"perl use/require statement: $1",
             }];
         }
