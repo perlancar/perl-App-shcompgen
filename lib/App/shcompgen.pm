@@ -709,8 +709,7 @@ _
             $init_script_path = "$ENV{HOME}/.config/shcompgen.bashrc";
         }
     } elsif ($shell eq 'fish') {
-        # nothing to do, should be ready
-        return [200, "OK"];
+        $dirs = _completion_scripts_dirs(%args);
     } else {
         return [412, "Shell '$shell' not yet supported"];
     }
@@ -718,15 +717,18 @@ _
     for my $dir (@$dirs) {
         unless (-d $dir) {
             require File::Path;
+            $log->tracef("Creating directory %s ...", $dir);
             File::Path::make_path($dir)
                   or return [500, "Can't create $dir: $!"];
             $instruction .= "Directory '$dir' created.\n\n";
         }
     }
 
-    write_text($init_script_path, $init_script);
-    $instruction .= "Please put this into your $init_location:".
-        "\n\n" . " . $init_script_path\n\n";
+    if ($init_script) {
+        write_text($init_script_path, $init_script);
+        $instruction .= "Please put this into your $init_location:".
+            "\n\n" . " . $init_script_path\n\n";
+    }
 
     $instruction = "Congratulations, shcompgen initialization is successful.".
         "\n\n$instruction";
