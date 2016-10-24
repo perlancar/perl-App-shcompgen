@@ -138,6 +138,7 @@ sub _set_args_defaults {
         my $sh = Shell::Guess->running_shell;
         my $n = $sh->{name};
         $n = "zsh" if $n eq 'z';
+        $n = "bash" if $n eq 'bourne'; # under make
         $args->{shell} = $n;
     }
     unless ($args->{shell} ~~ @supported_shells) {
