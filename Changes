@@ -1,5 +1,14 @@
 Revision history for App-shcompgen
 
+0.22    2016-10-25 (PERLANCAR)
+
+        - [Enhancement] [Experimental] Add support for zsh.
+
+        - [doc] Restore note about 'init' and 'generate' being run during
+          distribution installation, because shell detection has been modified
+          (bash is forced).
+
+
 0.21    2016-10-25 (PERLANCAR)
 
         - Use shell=bash when running under make (detected as bourne).
