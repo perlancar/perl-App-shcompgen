@@ -1,5 +1,12 @@
 Revision history for App-shcompgen
 
+0.21    2016-10-25 (PERLANCAR)
+
+        - Use shell=bash when running under make (detected as bourne).
+
+        - [Bugfix] init: didn't create completion scripts dir on fish.
+
+
 0.20    2016-10-21 (PERLANCAR)
 
         - [Enhancement] Add support for fish shell.
