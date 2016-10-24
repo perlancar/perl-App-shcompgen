@@ -104,16 +104,15 @@ _
     #    schema  => ['array*', of => 'str*'],
     #},
 
-    #zsh_global_dir => {
-    #    summary => 'Directory to put completions scripts',
-    #    schema  => ['array*', of => 'str*'],
-    #    schema  => 'str*',
-    #    default => [],
-    #},
-    #zsh_per_user_dir => {
-    #    summary => 'Directory to put completions scripts',
-    #    schema  => ['array*', of => 'str*'],
-    #},
+    zsh_global_dir => {
+        summary => 'Directory to put completions scripts',
+        schema  => ['array*', of => 'str*'],
+        default => ['/usr/local/share/zsh/site-functions'],
+    },
+    zsh_per_user_dir => {
+        summary => 'Directory to put completions scripts',
+        schema  => ['array*', of => 'str*'],
+    },
 );
 
 sub _all_exec_in_PATH {
@@ -155,8 +154,8 @@ sub _set_args_defaults {
     $args->{fish_per_user_dir} //= ["$ENV{HOME}/.config/fish/completions"];
     #$args->{tcsh_global_dir}   //= [];
     #$args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
-    #$args->{zsh_global_dir}    //= [];
-    #$args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
+    $args->{zsh_global_dir}    //= ['/usr/local/share/zsh/site-functions'];
+    $args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
     [200];
 }
 
@@ -722,11 +721,11 @@ _
 local added_dir
 for d in ~/.config/zsh/completions; do
   if [[ ${fpath[(i)$d]} == "" || ${fpath[(i)$d]} -gt ${#fpath} ]]; then
-    fpath = ($d $fpath)
-    added_dir = 1
+    fpath=($d $fpath)
+    added_dir=1
   fi
 done
-if [[ $added_dir ]]; then compinit; fi
+if [[ $added_dir == 1 ]]; then compinit; fi
 _
 
         if ($global) {
