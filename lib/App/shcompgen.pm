@@ -173,9 +173,11 @@ sub _gen_completion_script {
     my $args   = $detres->[3]{'func.completer_command_args'};
     my $qargs  = String::ShellQuote::shell_quote($args) if defined $args;
 
+    my $header_at_bottom;
     my $script;
     if ($shell eq 'bash') {
         if (defined $args) {
+
             $script = q|
 _|.$prog.q| ()
 {
@@ -202,7 +204,25 @@ complete -F _|."$prog $qprog".q|
         } else {
             $script = "complete -C $qcomp $qprog";
         }
+
+    } elsif ($shell eq 'zsh') {
+
+        if (defined $args) {
+            die "TODO: args not yet supported";
+        } else {
+            $header_at_bottom++;
+            $script = q|#compdef |.$prog.q|
+_|.$prog.q|() {
+    si=$IFS
+    compadd -- $(COMP_LINE=$BUFFER COMP_POINT=$CURSOR |.$qprog.q|)
+    IFS=$si
+}
+_|.$prog.q| "$@"
+|;
+        }
+
     } elsif ($shell eq 'fish') {
+
         require File::Which;
         my $path = File::Which::which($comp);
         my $type = $detres->[3]{'func.completer_type'};
@@ -240,8 +260,14 @@ complete -F _|."$prog $qprog".q|
     }
 
   L1:
-    $script = "# FRAGMENT id=shcompgen-header note=".
-        ($detres->[3]{'func.note'} // ''). "\n$script\n";
+    if ($header_at_bottom) {
+        $script = "$script\n".
+            "# FRAGMENT id=shcompgen-header note=".
+                ($detres->[3]{'func.note'} // ''). "\n";
+    } else {
+        $script = "# FRAGMENT id=shcompgen-header note=".
+            ($detres->[3]{'func.note'} // ''). "\n$script\n";
+    }
 
     $script;
 }
@@ -286,7 +312,7 @@ sub _completion_script_path {
     } elsif ($shell eq 'tcsh') {
         $path = "$dir/$prog";
     } elsif ($shell eq 'zsh') {
-        $path = "$dir/$prog";
+        $path = "$dir/_$prog";
     }
     $path;
 }
