@@ -99,7 +99,7 @@ location, this script will probably be adjusted too.
 
 Known issues include proper escaping of completion answer (e.g. when an answer
 contains a whitespace). To demonstrate this problem, try
-C<peri-eg-complete-fruits-any> and type:
+L<peri-eg-complete-fruits-any> and type:
 
  % peri-eg-complete-fruits-any --fruit <tab>
 
@@ -128,7 +128,7 @@ shell). And after you remove a completion script, you will need to C<uncomplete>
 
 Known issues include proper escaping of completion answer (e.g. when an answer
 contains a whitespace). To demonstrate this problem, try
-C<peri-eg-complete-fruits-any> and type:
+L<peri-eg-complete-fruits-any> and type:
 
  % peri-eg-complete-fruits-any --fruit <tab>
 
@@ -138,7 +138,7 @@ The answer C<butternut squash> is only returned as C<butternut\\ >.
 
 Known issues include proper escaping of completion answer (e.g. when an answer
 contains a whitespace). To demonstrate this problem, try
-C<peri-eg-complete-fruits-any> and type:
+L<peri-eg-complete-fruits-any> and type:
 
  % peri-eg-complete-fruits-any --fruit <tab>
 
