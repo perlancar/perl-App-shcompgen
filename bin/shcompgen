@@ -101,6 +101,25 @@ L<Perinci::CmdLine>-based scripts which have subcommands.
 
 =head2 tcsh-specific information
 
+So far I couldn't get fallback (a.k.a catch-all) completion mechanism to work in
+tcsh. For example if I do:
+
+ complete '*' 'p/*/`helper`/'
+
+then it will eclipse the other existing completion definitions.
+
+So in tcsh, activating (or deactivating) completion is currently less convenient
+compared to the other shells. Instead of the C<complete> definitions being put on
+a per-command basis in C<~/.config/tcsh/completions/> directory, the init script
+C<~/.config/shcompgen.tcsh> will directly contain all the C<complete>
+definitions. This script must be sourced to update the definitions. So after you
+
+ % shcompgen generate foo
+
+you will need to re-source the init script (or logout from + login back to the
+shell). And after you remove a completion script, you will need to C<uncomplete>
++ re-source the init script (or logout from + login back to the shell).
+
 =head2 zsh-specific information
 
 =head2 Program detection
