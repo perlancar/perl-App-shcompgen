@@ -1,5 +1,12 @@
 Revision history for App-shcompgen
 
+0.24    2016-10-25 (PERLANCAR)
+
+	- No functional changes.
+
+	- Document known issues (zsh, fish, tcsh).
+
+
 0.23    2016-10-25 (PERLANCAR)
 
 	- Add tcsh support.
