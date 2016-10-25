@@ -258,7 +258,7 @@ complete -F _|."$prog $qprog".q|
             $script = q|#compdef |.$prog.q|
 _|.$prog.q|() {
     si=$IFS
-    compadd -- $(COMP_LINE=$BUFFER COMP_POINT=$CURSOR |.$qprog.q|)
+    compadd -- $(COMP_LINE=$BUFFER COMP_POINT=$CURSOR |.$qcomp.q|)
     IFS=$si
 }
 _|.$prog.q| "$@"
