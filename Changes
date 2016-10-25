@@ -1,15 +1,30 @@
 Revision history for App-shcompgen
 
+0.26    2016-10-26 (PERLANCAR)
+
+        - Re-upload.
+
+
+0.25    2016-10-26 (PERLANCAR)
+
+        - [Enhancement] Support completion for Getopt::Long scripts for all
+          shells (previously only for fish).
+
+        - [Bugfix] list: was empty when shell is not bash
+
+        - A couple of other tweaks and fixes.
+
+
 0.24    2016-10-25 (PERLANCAR)
 
 	- No functional changes.
 
-	- Document known issues (zsh, fish, tcsh).
+	- [doc] Document known issues (zsh, fish, tcsh).
 
 
 0.23    2016-10-25 (PERLANCAR)
 
-	- Add tcsh support.
+	- [Enhancement] Add tcsh support.
 
 
 0.22    2016-10-25 (PERLANCAR)

@@ -237,15 +237,17 @@ sub _gen_completion_script {
 
     if ($shell ne 'fish' &&
             ($detres->[3]{'func.completer_type'} // '') eq 'Getopt::Long') {
+        require Data::Dmp;
+        require Getopt::Long::Dump;
+
         my $progpath = $detres->[3]{'func.program_path'};
         my $content;
-        require Getopt::Long::Dump;
         my $dump_res = Getopt::Long::Dump::dump_getopt_long_script(
             filename => $progpath,
         );
         if ($dump_res->[0] != 200) {
             $log->errorf("Can't dump Getopt::Long script '%s': %s", $progpath, $dump_res);
-            $script = "# Can't dump Getopt::Long script '$progpath': $dump_res->[0] - $dump_res->[2]\n";
+            $script = "# Can't dump Getopt::Long script '$progpath': $dump_res->[0] - $dump_res->[1]\n";
             goto L1;
         }
         $content = join(
