@@ -1011,6 +1011,8 @@ sub list {
     my $setdef_res = _set_args_defaults(\%args);
     return $setdef_res unless $setdef_res->[0] == 200;
 
+    my $shell = $args{shell};
+
     my @res;
     my $resmeta = {};
     my $dirs = _completion_scripts_dirs(%args);
@@ -1021,7 +1023,12 @@ sub list {
             next if $entry eq '.' || $entry eq '..';
 
             # XXX refactor: put to function (_file_to_prog)
-            my $prog = $entry; $prog =~ /\.fish\z/ if $args{shell} eq 'fish';
+            my $prog = $entry;
+            if ($shell eq 'fish') {
+                $prog =~ s/\.fish\z//;
+            } elsif ($shell eq 'zsh') {
+                $prog =~ s/\A_//;
+            }
             next unless $prog =~ $re_progname;
 
             # XXX refactor: put to function (_read_completion_script)
