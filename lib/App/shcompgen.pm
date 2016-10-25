@@ -71,6 +71,7 @@ user, per-user directory is chosen. Using `--global` or `--per-user` overrides
 that and manually select which.
 
 _
+        tags => ['common'],
     },
 
     bash_global_dir => {
@@ -78,50 +79,48 @@ _
         schema  => ['array*', of => 'str*'],
         default => ['/usr/share/bash-completion/completions',
                     '/etc/bash_completion.d'],
+        tags => ['common'],
     },
     bash_per_user_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
+        tags => ['common'],
     },
 
     fish_global_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
         default => ['/usr/share/fish/completions', '/etc/fish/completions'],
+        tags => ['common'],
     },
     fish_per_user_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
+        tags => ['common'],
     },
 
     tcsh_global_dir => {
         summary => 'Directory to put completions scripts',
-        description => <<'_',
-
-Currently actually hardcoded to `/etc/tcsh/completions`.
-
-_
         schema  => ['array*', of => 'str*'],
         default => ['/etc/tcsh/completions'],
+        tags => ['common'],
     },
     tcsh_per_user_dir => {
         summary => 'Directory to put completions scripts',
-        description => <<'_',
-
-Currently actually hardcoded to `~/.config/tcsh/completions`.
-
-_
         schema  => ['array*', of => 'str*'],
+        tags => ['common'],
     },
 
     zsh_global_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
         default => ['/usr/local/share/zsh/site-functions'],
+        tags => ['common'],
     },
     zsh_per_user_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
+        tags => ['common'],
     },
 );
 
