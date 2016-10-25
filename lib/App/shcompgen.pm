@@ -123,6 +123,18 @@ _
         schema  => ['array*', of => 'str*'],
         tags => ['common'],
     },
+
+    helper_global_dir => {
+        summary => 'Directory to put helper scripts',
+        schema  => ['str*'],
+        default => '/etc/shcompgen/helpers',
+        tags => ['common'],
+    },
+    helper_per_user_dir => {
+        summary => 'Directory to put helper scripts',
+        schema  => ['str*'],
+        tags => ['common'],
+    },
 );
 
 sub _all_exec_in_PATH {
@@ -167,6 +179,8 @@ sub _set_args_defaults {
     $args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
     $args->{zsh_global_dir}    //= ['/usr/local/share/zsh/site-functions'];
     $args->{zsh_per_user_dir}  //= ["$ENV{HOME}/.config/zsh/completions"];
+    $args->{helper_global_dir}   //= '/etc/shcompgen/helpers';
+    $args->{helper_per_user_dir} //= "$ENV{HOME}/.config/shcompgen/helpers";
     [200];
 }
 
@@ -219,6 +233,38 @@ sub _gen_completion_script {
 
     my $header_at_bottom;
     my $script;
+    my @helper_scripts;
+
+    if ($shell ne 'fish' &&
+            ($detres->[3]{'func.completer_type'} // '') eq 'Getopt::Long') {
+        my $progpath = $detres->[3]{'func.program_path'};
+        my $content;
+        require Getopt::Long::Dump;
+        my $dump_res = Getopt::Long::Dump::dump_getopt_long_script(
+            filename => $progpath,
+        );
+        if ($dump_res->[0] != 200) {
+            $log->errorf("Can't dump Getopt::Long script '%s': %s", $progpath, $dump_res);
+            $script = "# Can't dump Getopt::Long script '$progpath': $dump_res->[0] - $dump_res->[2]\n";
+            goto L1;
+        }
+        $content = join(
+            "",
+            "#!$^X\n",
+            "use Getopt::Long::Complete;\n",
+            "my \$spec = ", Data::Dmp::dmp($dump_res->[2]), ";\n",
+            "GetOptions(%\$spec);\n",
+        );
+        $comp = ($args{global} ?
+                     $args{helper_global_dir} : $args{helper_per_user_dir}) .
+            "/$prog";
+        $qcomp = String::ShellQuote::shell_quote($comp);
+        push @helper_scripts, {
+            path => $comp,
+            content => $content,
+        };
+    }
+
     if ($shell eq 'bash') {
         if (defined $args) {
 
@@ -310,7 +356,7 @@ _|.$prog.q| "$@"
             $script = "# TODO for type=$type\n";
         }
     } else {
-        die "Sorry, shells other than bash/fish are not supported yet";
+        die "Sorry, shell '$shell' is not supported yet";
     }
 
   L1:
@@ -323,7 +369,13 @@ _|.$prog.q| "$@"
             ($detres->[3]{'func.note'} // ''). "\n$script\n";
     }
 
-    $script;
+    my $i = 0;
+    for (@helper_scripts) {
+        $i++;
+        $script .= "# FRAGMENT id=shcompgen-helper-$i path=$_->{path}\n";
+    }
+
+    ($script, @helper_scripts);
 }
 
 sub _completion_scripts_dirs {
@@ -517,9 +569,10 @@ sub _detect_prog {
             }];
         }
 
-        if ($shell eq 'fish' && $is_perl_script &&
+        if ($is_perl_script &&
                 $content =~ /^\s*((?:use|require)\s+(Getopt::Long))\b/m) {
             return [200, "OK", 1, {
+                "func.program_path" => $progpath,
                 "func.completer_command" => $prog,
                 "func.completer_type" => $2,
                 "func.note"=>"perl use/require statement: $1",
@@ -604,7 +657,7 @@ sub _generate_or_remove {
                 }
             }
 
-            my $script = _gen_completion_script(
+            my ($script, @helper_scripts) = _gen_completion_script(
                 %args, prog => $prog, detect_res => $detres);
             my $comppath = _completion_script_path(
                 %args, prog => $prog, detect_res => $detres);
@@ -627,9 +680,22 @@ sub _generate_or_remove {
             if ($@) {
                 $envres->add_result(500, "Can't write to '$comppath': $@",
                                     {item_id=>$prog0});
-            } else {
-                $envres->add_result(200, "OK", {item_id=>$prog0});
+                next PROG;
             }
+            for my $hs (@helper_scripts) {
+                $log->infof("Writing helper script %s ...", $hs->{path});
+                $written_files{$hs->{path}}++;
+                eval {
+                    write_text($hs->{path}, $hs->{content});
+                    chmod 0755, $hs->{path};
+                };
+                if ($@) {
+                    $envres->add_result(500, "Can't write helper script to '$hs->{path}': $@",
+                                        {item_id=>$prog0});
+                    next PROG;
+                }
+            }
+            $envres->add_result(200, "OK", {item_id=>$prog0});
         } # generate
 
       REMOVE:
@@ -656,13 +722,25 @@ sub _generate_or_remove {
                 next PROG;
             }
             $log->infof("Unlinking %s ...", $comppath);
-            if (unlink $comppath) {
-                $envres->add_result(200, "OK", {item_id=>$prog0});
-                $removed_files{$comppath}++;
-            } else {
+            unless (unlink $comppath) {
                 $envres->add_result(500, "Can't unlink '$comppath': $!",
                                     {item_id=>$prog0});
+                next PROG;
             }
+            # XXX we should only remove helper script if there are no other
+            # shells' completion scripts using this
+            while ($content =~ /^# FRAGMENT id=shcompgen-helper-\d+ path=(.+)/mg) {
+                my $hspath = $1;
+                $log->infof("Unlinking helper script %s ...", $1);
+                unless (unlink $hspath) {
+                    $envres->add_result(500, "Can't unlink helper script '$hspath': $!",
+                                        {item_id=>$prog0});
+                    next PROG;
+                }
+                $removed_files{$hspath}++;
+            }
+            $envres->add_result(200, "OK", {item_id=>$prog0});
+            $removed_files{$comppath}++;
         } # remove
 
     } # for prog0
@@ -758,6 +836,12 @@ sub init {
     my $init_script_path;
 
     $dirs = _completion_scripts_dirs(%args);
+
+    if ($global) {
+        push @$dirs, $args{helper_global_dir};
+    } else {
+        push @$dirs, $args{helper_per_user_dir};
+    }
 
     if ($shell eq 'bash') {
         $init_location = $global ? "/etc/bash.bashrc" : "~/.bashrc";
