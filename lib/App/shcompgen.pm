@@ -46,6 +46,7 @@ our %shell_arg = (
     shell => {
         summary => 'Override guessing and select shell manually',
         schema => ['str*', {in=>\@supported_shells}],
+        tags => ['common'],
     },
 );
 our %common_args = (
