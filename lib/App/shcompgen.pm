@@ -47,6 +47,11 @@ our %shell_arg = (
         summary => 'Override guessing and select shell manually',
         schema => ['str*', {in=>\@supported_shells}],
         tags => ['common'],
+        cmdline_aliases => {
+            fish => {summary=>"Shortcut for --shell=fish", is_flag=>1, code=>sub { $_[0]{shell} = "fish" }},
+            zsh  => {summary=>"Shortcut for --shell=zsh" , is_flag=>1, code=>sub { $_[0]{shell} = "zsh"  }},
+            tcsh => {summary=>"Shortcut for --shell=tcsh", is_flag=>1, code=>sub { $_[0]{shell} = "tcsh" }},
+        },
     },
 );
 our %common_args = (
