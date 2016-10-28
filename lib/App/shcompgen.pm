@@ -135,6 +135,21 @@ _
         schema  => ['str*'],
         tags => ['common'],
     },
+
+    per_option => {
+        summary => 'Create per-option completion script if possible',
+        description => <<'_',
+
+If set to true, then attempt to create completion script that register each
+option. This creates nicer completion in some shells, e.g. fish and zsh. For
+example, option description can be shown.
+
+This is possible for only some types of scripts, e.g. <pm:Perinci::CmdLine>-
+(that does not have subcommands) or <pm:Getopt::Long::Descriptive>-based ones.
+
+_
+        schema => 'bool',
+    },
 );
 
 sub _all_exec_in_PATH {
@@ -299,11 +314,43 @@ complete -F _|."$prog $qprog".q|
 
     } elsif ($shell eq 'zsh') {
 
-        if (defined $args) {
-            $script = "# TODO: args not yet supported\n";
-        } else {
+      GEN_ZSH:
+        {
             $header_at_bottom++;
-            $script = q|#compdef |.$prog.q|
+            if ($args{per_option}) {
+                if ($detres->[3]{'func.completer_type'} =~ /^Perinci::CmdLine/) {
+                    require Complete::Zsh::Gen::FromPerinciCmdLine;
+                    my $res = Complete::Zsh::Gen::FromPerinciCmdLine::gen_zsh_complete_from_perinci_cmdline_script(
+                        filename => $progpath,
+                        skip_detect => 1,
+                    );
+                    if ($res->[0] == 200) {
+                        $log->debugf("Using per-option completion script for '%s'", $prog);
+                        $script = $res->[2];
+                        last GEN_ZSH;
+                    } else {
+                        $log->debugf("Can't generate per-option completion script for '%s': %s, falling back", $prog, $res);
+                    }
+                } elsif ($detres->[3]{'func.completer_type'} =~ /^Getopt::Long::Descriptive/) {
+                    require Complete::Zsh::Gen::FromGetoptLongDescriptive;
+                    my $res = Complete::Zsh::Gen::FromGetoptLongDescriptive::gen_zsh_complete_from_getopt_long_descriptive_script(
+                        filename => $progpath,
+                        skip_detect => 1,
+                    );
+                    if ($res->[0] == 200) {
+                        $log->debugf("Using per-option completion script for '%s'", $prog);
+                        $script = $res->[2];
+                        last GEN_ZSH;
+                    } else {
+                        $log->debugf("Can't generate per-option completion script for '%s': %s, falling back", $prog, $res);
+                    }
+                }
+            }
+
+            if (defined $args) {
+                $script = "# TODO: args not yet supported\n";
+            } else {
+                $script = q|#compdef |.$prog.q|
 _|.$prog.q|() {
     si=$IFS
     compadd -- $(COMP_SHELL=zsh COMP_LINE=$BUFFER COMP_POINT=$CURSOR |.$qcomp.q|)
@@ -311,6 +358,7 @@ _|.$prog.q|() {
 }
 _|.$prog.q| "$@"
 |;
+            }
         }
 
     } elsif ($shell eq 'tcsh') {
@@ -325,10 +373,43 @@ _|.$prog.q| "$@"
 
     } elsif ($shell eq 'fish') {
 
-        if (defined $args) {
-            $script = "# TODO: args not yet supported\n";
-        } else {
-            $script = "complete -c $qprog -a '(begin; set -lx COMP_SHELL fish; set -lx COMP_LINE (commandline); set -lx COMP_POINT (commandline -C); $qcomp; end)'\n";
+      GEN_FISH:
+        {
+            if ($args{per_option}) {
+                if ($detres->[3]{'func.completer_type'} =~ /^Perinci::CmdLine/) {
+                    require Complete::Fish::Gen::FromPerinciCmdLine;
+                    my $res = Complete::Fish::Gen::FromPerinciCmdLine::gen_fish_complete_from_perinci_cmdline_script(
+                        filename => $progpath,
+                        skip_detect => 1,
+                    );
+                    if ($res->[0] == 200) {
+                        $log->debugf("Using per-option completion script for '%s'", $prog);
+                        $script = $res->[2];
+                        last GEN_FISH;
+                    } else {
+                        $log->debugf("Can't generate per-option completion script for '%s': %s, falling back", $prog, $res);
+                    }
+                } elsif ($detres->[3]{'func.completer_type'} =~ /^Getopt::Long::Descriptive/) {
+                    require Complete::Fish::Gen::FromGetoptLongDescriptive;
+                    my $res = Complete::Fish::Gen::FromGetoptLongDescriptive::gen_fish_complete_from_getopt_long_descriptive_script(
+                        filename => $progpath,
+                        skip_detect => 1,
+                    );
+                    if ($res->[0] == 200) {
+                        $log->debugf("Using per-option completion script for '%s'", $prog);
+                        $script = $res->[2];
+                        last GEN_FISH;
+                    } else {
+                        $log->debugf("Can't generate per-option completion script for '%s': %s, falling back", $prog, $res);
+                    }
+                }
+            }
+
+            if (defined $args) {
+                $script = "# TODO: args not yet supported\n";
+            } else {
+                $script = "complete -c $qprog -a '(begin; set -lx COMP_SHELL fish; set -lx COMP_LINE (commandline); set -lx COMP_POINT (commandline -C); $qcomp; end)'\n";
+            }
         }
 
     } else {
