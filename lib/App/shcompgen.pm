@@ -463,8 +463,8 @@ sub _detect_prog {
         my $completee;
         for my $line (@lines) {
             if ($line =~
-                    /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m) {
-                my $has_hint_completer++;
+                    /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/) {
+                $has_hint_completer++;
                 $completee = $1;
                 last;
             }
@@ -482,6 +482,16 @@ sub _detect_prog {
         }
 
         if ($is_perl_script) {
+            for my $line (@lines) {
+                if ($line =~ /^\s*\# PERICMD_INLINE_SCRIPT: /) {
+                    # pericmd-inline script cannot complete themselves, but they
+                    # usually come with a separate completer script
+                    return [200, "OK", 0, {
+                        "func.reason" => "Perinci::CmdLine::Inline script",
+                    }];
+                }
+            }
+
             for my $line (@lines) {
                 if ($line =~ /^\s*((?:use|require)\s+
                                   (Getopt::Long(?:::Complete|::Subcommand|::Descriptive)?|
