@@ -1,5 +1,17 @@
 Revision history for App-shcompgen
 
+0.28    2016-10-28 (PERLANCAR)
+
+        - Add shortcut options --zsh, --fish, --tcsh.
+
+        - Support Getopt::Long::Descriptive-based scripts.
+
+        - Add option --per-option to enable generating prettier completion
+          scripts when possible.
+
+        - Some bug fixes.
+
+
 0.27    2016-10-26 (PERLANCAR)
 
 	- fish: Use general form ('complete -c CMD -a (...)') instead of
