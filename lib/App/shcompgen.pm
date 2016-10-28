@@ -32,12 +32,12 @@ my $_complete_prog = sub {
         # user might want to mention a program file (e.g. ./foo)
         return {
             words => Complete::File::complete_file(
-                word=>$word, ci=>1, filter=>'d|rxf'),
+                word=>$word, filter=>'d|rxf'),
             path_sep => '/',
         };
     } else {
         # or user might want to mention a program in PATH
-        Complete::Program::complete_program(word=>$word, ci=>1);
+        Complete::Program::complete_program(word=>$word);
     }
 };
 
@@ -985,7 +985,7 @@ _
                 my $res = list($args{args});
                 return undef unless $res->[0] == 200;
                 Complete::Util::complete_array_elem(
-                    array=>$res->[2], word=>$word, ci=>1);
+                    array=>$res->[2], word=>$word);
             },
         },
     },
