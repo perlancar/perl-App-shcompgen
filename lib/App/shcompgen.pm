@@ -225,6 +225,7 @@ sub _gen_completion_script {
     my $detres = $args{detect_res};
     my $shell  = $args{shell};
     my $prog   = $detres->[3]{'func.completee'} // $args{prog};
+    my $progpath = $args{progpath};
     my $qprog  = String::ShellQuote::shell_quote($prog);
     my $comp   = $detres->[3]{'func.completer_command'};
     my $qcomp  = String::ShellQuote::shell_quote($comp);
@@ -235,14 +236,14 @@ sub _gen_completion_script {
     my $script;
     my @helper_scripts;
 
-    if (($detres->[3]{'func.completer_type'} // '') eq 'Getopt::Long') {
+    if (($detres->[3]{'func.completer_type'} // '') =~ /\AGetopt::Long(?:::Descriptive)?\z/) {
         require Data::Dmp;
         require Getopt::Long::Dump;
 
-        my $progpath = $detres->[3]{'func.program_path'};
         my $content;
         my $dump_res = Getopt::Long::Dump::dump_getopt_long_script(
             filename => $progpath,
+            skip_detect => 1,
         );
         if ($dump_res->[0] != 200) {
             $log->errorf("Can't dump Getopt::Long script '%s': %s", $progpath, $dump_res);
@@ -422,13 +423,30 @@ sub _detect_prog {
 
   DETECT:
     {
-        if ($content =~
-                /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)(?:\s+command_args=(.+))?\s*$/m
-                && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
-            # program give hints in its source code that it can be completed using a
-            # certain command
-            my $cmd = $1;
-            my $args = $2;
+        # split per line to avoid pathological case of slowness when number of
+        # source lines reaches many thousands.
+        my @lines = split /^/, $content;
+
+        my ($has_hint_cmd, $cmd, $args);
+        for my $line (@lines) {
+            if ($line =~
+                    /^\s*# FRAGMENT id=shcompgen-hint command=(.+?)(?:\s+command_args=(.+))?\s*$/) {
+                $has_hint_cmd++;
+                $cmd = $1;
+                $args = $2;
+                last;
+            }
+        }
+        my $has_nohint;
+        for my $line (@lines) {
+            if ($line =~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/) {
+                $has_nohint++;
+                last;
+            }
+        }
+        if ($has_hint_cmd && !$has_nohint) {
+            # program give hints in its source code that it can be completed
+            # using a certain command
             if (defined($args) && $args =~ s/\A"//) {
                 $args =~ s/"\z//;
                 $args =~ s/\\(.)/$1/g;
@@ -440,11 +458,18 @@ sub _detect_prog {
                 %extrametas,
             }];
         }
-        if(!$args{_skip_completer_hint} &&
-               $content =~
-               /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m
-               && $content !~ /^\s*# FRAGMENT id=shcompgen-nohint\s*$/m) {
-            my $completee = $1;
+
+        my $has_hint_completer;
+        my $completee;
+        for my $line (@lines) {
+            if ($line =~
+                    /^\s*# FRAGMENT id=shcompgen-hint completer=1 for=(.+?)\s*$/m) {
+                my $has_hint_completer++;
+                $completee = $1;
+                last;
+            }
+        }
+        if ($has_hint_completer && !$has_nohint) {
             return [400, "completee specified in '$progpath' is not a valid ".
                         "program name: $completee"]
                 unless $completee =~ $re_progname;
@@ -456,46 +481,18 @@ sub _detect_prog {
             }];
         }
 
-        if ($is_perl_script &&
-                # regex split here because i found a pathological case of very
-                # long matching time againt 'rsybak' datapacked script (~ 4M)
-                $content =~ /^\s*((?:use|require)\s+(Getopt::Long::Complete))\b/m ||
-                $content =~ /^\s*((?:use|require)\s+(Getopt::Long::Subcommand))\b/m) {
-            return [200, "OK", 1, {
-                "func.completer_command"=> $prog,
-                "func.completer_type"=> $2,
-                "func.note"=>"perl use/require statement: $1",
-            }];
-        }
-
-        if ($is_perl_script &&
-                $content =~ /^\s*((?:use|require)\s+(Getopt::Long))\b/m) {
-            return [200, "OK", 1, {
-                "func.program_path" => $progpath,
-                "func.completer_command" => $prog,
-                "func.completer_type" => $2,
-                "func.note"=>"perl use/require statement: $1",
-            }];
-        }
-
-      DETECT_PERICMD:
-        {
-            last unless $is_perl_script;
-            require Perinci::CmdLine::Util;
-            my $det_res = Perinci::CmdLine::Util::detect_perinci_cmdline_script(
-                string => $content);
-            $log->tracef("Perinci::CmdLine detection result: %s", $det_res);
-            last unless $det_res->[2];
-
-            # pericmd-inline doesn't currently support self-completion
-            last if $det_res->[3]{'func.is_inline'};
-
-            return [200, "OK", 1, {
-                "func.completer_command"=> $prog,
-                "func.completer_type"=> "Perinci::CmdLine",
-                "func.note"=>"detected using Perinci::CmdLine::Util",
-                "func.pericmd_detect_result" => $det_res,
-            }];
+        if ($is_perl_script) {
+            for my $line (@lines) {
+                if ($line =~ /^\s*((?:use|require)\s+
+                                  (Getopt::Long(?:::Complete|::Subcommand|::Descriptive)?|
+                                      Perinci::CmdLine(?:::Any|::Lite|::Classic)))\b/x) {
+                    return [200, "OK", 1, {
+                        "func.completer_command"=> $prog, # later will be set
+                        "func.completer_type"=> $2,
+                        "func.note"=>"perl use/require statement: $1",
+                    }];
+                }
+            }
         }
     }
     [200, "OK", 0];
@@ -557,7 +554,7 @@ sub _generate_or_remove {
             }
 
             my ($script, @helper_scripts) = _gen_completion_script(
-                %args, prog => $prog, detect_res => $detres);
+                %args, prog => $prog, progpath => $progpath, detect_res => $detres);
             my $comppath = _completion_script_path(
                 %args, prog => $prog, detect_res => $detres);
 
