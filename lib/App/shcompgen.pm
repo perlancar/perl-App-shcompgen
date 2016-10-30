@@ -83,8 +83,7 @@ _
     bash_global_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
-        default => ['/usr/share/bash-completion/completions',
-                    '/etc/bash_completion.d'],
+        default => ['/etc/bash/completions'],
         tags => ['common'],
     },
     bash_per_user_dir => {
@@ -96,7 +95,7 @@ _
     fish_global_dir => {
         summary => 'Directory to put completions scripts',
         schema  => ['array*', of => 'str*'],
-        default => ['/usr/share/fish/completions', '/etc/fish/completions'],
+        default => ['/etc/fish/completions'],
         tags => ['common'],
     },
     fish_per_user_dir => {
@@ -189,11 +188,9 @@ sub _set_args_defaults {
 
     $args->{global} //= ($> ? 0:1);
 
-    $args->{bash_global_dir}   //= ['/usr/share/bash-completion/completions',
-                                    '/etc/bash_completion.d'];
+    $args->{bash_global_dir}   //= ['/etc/bash/completions'];
     $args->{bash_per_user_dir} //= ["$ENV{HOME}/.config/bash/completions"];
-    $args->{fish_global_dir}   //= ['/usr/share/fish/completions',
-                                    '/etc/fish/completions'];
+    $args->{fish_global_dir}   //= ['/etc/fish/completions'];
     $args->{fish_per_user_dir} //= ["$ENV{HOME}/.config/fish/completions"];
     $args->{tcsh_global_dir}   //= ['/etc/tcsh/completions'];
     $args->{tcsh_per_user_dir} //= ["$ENV{HOME}/.config/tcsh/completions"];
@@ -850,13 +847,12 @@ _shcompgen_loader()
 
     # XXX should we use --bash-{global,per-user}-dir supplied by user here? probably.
     local dirs
+    dirs=(~/.config/bash/completions /etc/bash/completions)
     if [[ "$bc_active" = 1 ]]; then
-        dirs=(~/.config/bash/completions /etc/bash_completion.d /usr/share/bash-completion/completions)
-    else
-        # we don't use bash-completion scripts when bash-completion is not
+        # we only search in bash-completion dirs when bash-completion has been
         # initialized because some of the completion scripts require that
-        # bash-completion system is initialized first
-        dirs=(~/.config/bash/completions)
+        # bash-completion system is initialized first (e.g. _init_completion)
+        dirs+=(/etc/bash_completion.d /usr/share/bash-completion/completions)
     fi
 
     local d
