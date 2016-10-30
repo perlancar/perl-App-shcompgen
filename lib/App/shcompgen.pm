@@ -284,6 +284,42 @@ sub _gen_completion_script {
         };
     }
 
+    if (($detres->[3]{'func.completer_type'} // '') =~ /\AGetopt::Std\z/) {
+        require Data::Dmp;
+        require Getopt::Long::Util;
+        require Getopt::Std::Dump;
+
+        my $content;
+        my $dump_res = Getopt::Std::Dump::dump_getopt_std_script(
+            filename => $progpath,
+            skip_detect => 1,
+        );
+        if ($dump_res->[0] != 200) {
+            $log->errorf("Can't dump Getopt::Std script '%s': %s", $progpath, $dump_res);
+            $script = "# Can't dump Getopt::Std script '$progpath': $dump_res->[0] - $dump_res->[1]\n";
+            goto L1;
+        }
+        $content = join(
+            "",
+            "#!$^X\n",
+            "use Getopt::Long::Complete;\n",
+            "my \$spec = ", Data::Dmp::dmp(
+                Getopt::Long::Util::gen_getopt_long_spec_from_getopt_std_spec(
+                    is_getopt => $dump_res->[2][0] eq 'getopt' ? 1:0,
+                    spec => $dump_res->[2][1])
+              ), ";\n",
+            "GetOptions(%\$spec);\n",
+        );
+        $comp = ($args{global} ?
+                     $args{helper_global_dir} : $args{helper_per_user_dir}) .
+            "/$prog";
+        $qcomp = String::ShellQuote::shell_quote($comp);
+        push @helper_scripts, {
+            path => $comp,
+            content => $content,
+        };
+    }
+
     if ($shell eq 'bash') {
         if (defined $args) {
 
@@ -577,8 +613,11 @@ sub _detect_prog {
 
             for my $line (@lines) {
                 if ($line =~ /^\s*((?:use|require)\s+
-                                  (Getopt::Long(?:::Complete|::Subcommand|::Descriptive)?|
-                                      Perinci::CmdLine(?:::Any|::Lite|::Classic)))\b/x) {
+                                  (
+                                      Getopt::Std|
+                                      Getopt::Long(?:::Complete|::Subcommand|::Descriptive)?|
+                                      Perinci::CmdLine(?:::Any|::Lite|::Classic)
+                              ))\b/x) {
                     return [200, "OK", 1, {
                         "func.completer_command"=> $prog, # later will be set
                         "func.completer_type"=> $2,
