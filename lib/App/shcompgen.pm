@@ -615,7 +615,7 @@ sub _detect_prog {
                 if ($line =~ /^\s*((?:use|require)\s+
                                   (
                                       Getopt::Std|
-                                      Getopt::Long(?:::Complete|::Subcommand|::Descriptive)?|
+                                      Getopt::Long(?:::Complete|::Subcommand|::More|::Descriptive)?|
                                       Perinci::CmdLine(?:::Any|::Lite|::Classic)
                               ))\b/x) {
                     return [200, "OK", 1, {
