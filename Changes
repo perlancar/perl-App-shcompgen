@@ -7,24 +7,19 @@
 
 	- Support Getopt::Std-based scripts.
 
-	- [Bugfix] Don't write to bash-completion's dir, use our own dir
-
-	  In our loader (_shcompgen_loader shell function installed as complete
-	  -D) we detect whether bash-completion system is active, and if so then
-	  we also search for completion scripts in bash-completion dirs
-	  (/etc/bash_completion.d, /usr/share/bash-completion/completions) in
-	  addition to our dir because there is only one default loader and we
-	  want to support bash-completion.
-
-	  But we also put our completion scripts into bash-completion dir by
-	  default. This means, when bash-completion is not active, we don't load
-	  our own generated completion scripts.
-
-	  So now, the default for global dir for bash is /etc/bash/completions
-	  instead of /etc/bash_completion.d/
-
-	  Note that this is not an issue in zsh or fish because they have their
-	  fpath mechanism so we don't need to create our own default loader.
+	- [Bugfix] Don't write to bash-completion's dir, use our own dir. In our
+          loader (_shcompgen_loader shell function installed as complete -D) we
+          detect whether bash-completion system is active, and if so then we
+          also search for completion scripts in bash-completion dirs
+          (/etc/bash_completion.d, /usr/share/bash-completion/completions) in
+          addition to our dir because there is only one default loader and we
+          want to support bash-completion. But we also put our completion
+          scripts into bash-completion dir by default. This means, when
+          bash-completion is not active, we don't load our own generated
+          completion scripts. So now, the default for global dir for bash is
+          /etc/bash/completions instead of /etc/bash_completion.d/ . Note that
+          this is not an issue in zsh or fish because they have their fpath
+          mechanism so we don't need to create our own default loader.
 
 
 0.28    2016-10-28 (PERLANCAR)
