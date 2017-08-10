@@ -253,15 +253,25 @@ sub _gen_completion_script {
     my $script;
     my @helper_scripts;
 
-    if (($detres->[3]{'func.completer_type'} // '') =~ /\AGetopt::Long(?:::Descriptive)?\z/) {
+    if (($detres->[3]{'func.completer_type'} // '') =~ /\AGetopt::Long(?:::EvenLess|::Descriptive)?\z/) {
         require Data::Dmp;
-        require Getopt::Long::Dump;
 
         my $content;
-        my $dump_res = Getopt::Long::Dump::dump_getopt_long_script(
-            filename => $progpath,
-            skip_detect => 1,
-        );
+        my $dump_res;
+        if ($detres->[3]{'func.completer_type'} eq 'Getopt::Long::EvenLess') {
+            require Getopt::Long::EvenLess::Dump;
+            $dump_res = Getopt::Long::EvenLess::Dump::dump_getopt_long_evenless_script(
+                filename => $progpath,
+                skip_detect => 1,
+            );
+        } else {
+            require Getopt::Long::Dump;
+            $dump_res = Getopt::Long::Dump::dump_getopt_long_script(
+                filename => $progpath,
+                skip_detect => 1,
+            );
+        }
+
         if ($dump_res->[0] != 200) {
             log_error("Can't dump Getopt::Long script '%s': %s", $progpath, $dump_res);
             $script = "# Can't dump Getopt::Long script '$progpath': $dump_res->[0] - $dump_res->[1]\n";
@@ -615,7 +625,7 @@ sub _detect_prog {
                 if ($line =~ /^\s*((?:use|require)\s+
                                   (
                                       Getopt::Std|
-                                      Getopt::Long(?:::Complete|::Subcommand|::More|::Descriptive)?|
+                                      Getopt::Long(?:::Complete|::Less|::EvenLess|::Subcommand|::More|::Descriptive)?|
                                       Perinci::CmdLine(?:::Any|::Lite|::Classic)
                               ))\b/x) {
                     return [200, "OK", 1, {
