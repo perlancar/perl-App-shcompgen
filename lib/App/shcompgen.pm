@@ -217,7 +217,7 @@ sub _gen_tcsh_init_script {
     my @defs;
     for my $dir (@$dirs) {
         next unless -d $dir;
-        for my $file (<$dir/*>) {
+        for my $file (glob "$dir/*") {
             open my $fh, "<", $file or do {
                 warn "Can't open '$file': $!, skipped\n";
                 next;
@@ -225,6 +225,7 @@ sub _gen_tcsh_init_script {
             my $line = <$fh>;
             $line .= "\n" unless $line =~ /\n\z/;
             push @defs, $line;
+            close $fh;
         }
     }
     join(
@@ -247,7 +248,7 @@ sub _gen_completion_script {
     my $comp   = $detres->[3]{'func.completer_command'};
     my $qcomp  = String::ShellQuote::shell_quote($comp);
     my $args   = $detres->[3]{'func.completer_command_args'};
-    my $qargs  = String::ShellQuote::shell_quote($args) if defined $args;
+    my $qargs; $qargs = String::ShellQuote::shell_quote($args) if defined $args;
 
     my $header_at_bottom;
     my $script;
