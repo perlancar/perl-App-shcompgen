@@ -915,7 +915,7 @@ _shcompgen_loader()
     # otherwise, do as default (XXX still need to fix this, we don't want to
     # install a fixed completion for unknown commands; but using 'compopt -o
     # default' also creates a 'complete' entry)
-    complete -o default "$1" && return 124
+    complete -o bashdefault -o default "$1" && return 124
 }
 complete -D -F _shcompgen_loader
 _
