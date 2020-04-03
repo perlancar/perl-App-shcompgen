@@ -1,13 +1,14 @@
 #!perl
 
+# AUTHORITY
 # DATE
+# DIST
 # VERSION
 # FRAGMENT id=shcompgen-nohint
 
-use 5.010;
+use 5.010001;
 use strict;
 use warnings;
-use experimental 'smartmatch';
 
 use App::shcompgen;
 use Perinci::CmdLine::Any;

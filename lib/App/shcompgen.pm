@@ -1,12 +1,13 @@
 package App::shcompgen;
 
+# AUTHORITY
 # DATE
+# DIST
 # VERSION
 
 use 5.010001;
 use strict;
 use warnings;
-use experimental 'smartmatch';
 use Log::ger;
 
 use File::Slurper qw(read_text write_text);
@@ -182,7 +183,7 @@ sub _set_args_defaults {
         $n = "bash" if $n eq 'bourne'; # under make
         $args->{shell} = $n;
     }
-    unless ($args->{shell} ~~ @supported_shells) {
+    unless (grep { $_ eq $args->{shell} } @supported_shells) {
         return [412, "Unsupported shell '$args->{shell}'"];
     }
 
@@ -547,7 +548,7 @@ sub _detect_prog {
 
     my $is_perl_script = <$fh> =~ /perl/;
     seek $fh, 0, 0;
-    my $content = do { local $/; ~~<$fh> };
+    my $content = do { local $/; scalar <$fh> };
 
     my %extrametas;
 
