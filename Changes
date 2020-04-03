@@ -1,3 +1,13 @@
+0.322   2020-04-03  Released-By: PERLANCAR; Urgency: medium
+
+	- Suggest putting sourcing in /etc/profile.d/shcompgen.sh instead
+	  of /etc/bash.bashrc when /etc/profile.d/ exists, so we can be
+	  loaded after bash_completion and our default completion handler
+	  is set instead of being overriden by bash_completion.
+
+	- Remove the use of smartmatch.
+
+
 0.321   2018-02-08  Released-By: PERLANCAR
 
 	- [Bugfix] Install default completion rule with -o bashdefault
