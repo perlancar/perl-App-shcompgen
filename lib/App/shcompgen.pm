@@ -1128,7 +1128,7 @@ _
                 my $word = $args{word} // '';
 
                 my $res = list($args{args});
-                return undef unless $res->[0] == 200;
+                return unless $res->[0] == 200;
                 Complete::Util::complete_array_elem(
                     array=>$res->[2], word=>$word);
             },

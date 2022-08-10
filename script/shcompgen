@@ -1,9 +1,5 @@
 #!perl
 
-# AUTHORITY
-# DATE
-# DIST
-# VERSION
 # FRAGMENT id=shcompgen-nohint
 
 use 5.010001;
@@ -12,6 +8,11 @@ use warnings;
 
 use App::shcompgen;
 use Perinci::CmdLine::Any;
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 my $urlprefix = '/App/shcompgen/';
 Perinci::CmdLine::Any->new(
