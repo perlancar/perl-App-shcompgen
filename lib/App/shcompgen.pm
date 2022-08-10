@@ -1,10 +1,5 @@
 package App::shcompgen;
 
-# AUTHORITY
-# DATE
-# DIST
-# VERSION
-
 use 5.010001;
 use strict;
 use warnings;
@@ -13,6 +8,11 @@ use Log::ger;
 use File::Slurper qw(read_text write_text);
 use Perinci::Object;
 use Perinci::Sub::Util qw(err);
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 our %SPEC;
 
@@ -284,7 +284,7 @@ sub _gen_completion_script {
             "#!$^X\n",
             "use Getopt::Long::Complete;\n",
             "my \$spec = ", Data::Dmp::dmp($dump_res->[2]), ";\n",
-            "GetOptions(%\$spec);\n",
+            "GetOptions(\@\$spec);\n",
         );
         $comp = ($args{global} ?
                      $args{helper_global_dir} : $args{helper_per_user_dir}) .
